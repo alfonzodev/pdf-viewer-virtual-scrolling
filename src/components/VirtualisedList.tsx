@@ -121,7 +121,7 @@ const VirtualisedList = ({
   return (
     <div
       style={{ width: `${viewportWidth}px`, height: `${viewportHeight}px` }}
-      className="overflow-scroll relative bg-[#f5f5f5] px-10"
+      className="overflow-scroll relative bg-[#f5f5f5] px-8"
       ref={viewportRef}
       onScroll={handleScroll}
     >

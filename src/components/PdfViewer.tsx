@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 
 import usePdf from "../hooks/usePdf";
 import VirtualisedList from "./VirtualisedList";
+import Controls from "./Controls";
 
 const PdfViewer = ({ file }: { file: File | null }) => {
   const { loadPdfDoc, pdfDoc, numPages, renderPage } = usePdf();
@@ -16,7 +17,7 @@ const PdfViewer = ({ file }: { file: File | null }) => {
   }, [file]);
 
   return (
-    <div className=" border-1 border shadow-sm">
+    <div className=" border-1 border shadow-sm select-none">
       <div className="w-full bg-white h-10 border-b  py-1 px-4 flex justify-start items-center">
         {file && <h1 className="font-medium text-sm">{file.name}</h1>}
       </div>
@@ -31,6 +32,12 @@ const PdfViewer = ({ file }: { file: File | null }) => {
         numPages={numPages}
         pageHeight={600}
         pageSpacing={15}
+      />
+      <Controls
+        setScale={setScale}
+        currentPageIndex={currentPageIndex}
+        numPages={numPages}
+        pdfDoc={pdfDoc}
       />
     </div>
   );
