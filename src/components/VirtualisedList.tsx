@@ -29,11 +29,29 @@ const VirtualisedList = ({
   scale,
 }: VirtualisedListProps) => {
   const viewportRef = useRef<HTMLDivElement>(null);
+  const previousScaleRef = useRef(scale);
 
   const [pagesInView, setPagesInView] = useState<{ index: number; url: string }[]>([]);
 
   // Apply Scale to Page Height (Zoomed in or Zoomed out)
   pageHeight = pageHeight * scale;
+
+  // Calculate Pdf Container Height based on Page Height and Number of Pages
+  const pdfContainerHeight = numPages * pageHeight + (numPages + 1) * pageSpacing;
+
+  // Update scroll position on new scale
+  useEffect(() => {
+    if (viewportRef.current) {
+      const currentScrollPosition = viewportRef.current.scrollTop;
+
+      if (currentScrollPosition !== 0) {
+        const newScrollPosition = (scale * currentScrollPosition) / previousScaleRef.current;
+        viewportRef.current.scrollTop = newScrollPosition;
+      }
+
+      previousScaleRef.current = scale;
+    }
+  }, [scale, numPages, pageHeight, pageSpacing]);
 
   const effectivePageHeight = pageHeight + pageSpacing;
 
@@ -125,9 +143,10 @@ const VirtualisedList = ({
       ref={viewportRef}
       onScroll={handleScroll}
     >
+      {/* Pdf Container */}
       <div
         style={{
-          height: `${numPages * pageHeight + (numPages + 1) * pageSpacing}px`,
+          height: `${pdfContainerHeight}px`,
           width: `${pageHeight / RATIO_ISO_216_PAPER_SIZE}px`,
         }}
         className="relative mx-auto"
@@ -144,9 +163,13 @@ const VirtualisedList = ({
                   width: `${pageHeight / RATIO_ISO_216_PAPER_SIZE}px`,
                   top: `${top}px`,
                 }}
-                className="absolute shadow-md border border-gray-50 p-1 flex justify-center items-center bg-white"
+                className="absolute shadow-md border border-gray-50 p-2 flex justify-center items-center bg-white"
               >
-                <img alt={`page ${index + 1} of the x doc`} src={url} className="w-auto h-auto" />
+                <img
+                  alt={`page ${index + 1} of the x doc`}
+                  src={url}
+                  className="w-auto h-auto max-h-full max-w-full"
+                />
               </div>
             );
           })}
