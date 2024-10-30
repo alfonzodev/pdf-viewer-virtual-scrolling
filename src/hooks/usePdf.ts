@@ -1,5 +1,6 @@
 import * as pdfjs from "pdfjs-dist";
 import { useState } from "react";
+import { pagesInViewArray } from "../types";
 
 const usePdf = () => {
   pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -49,7 +50,39 @@ const usePdf = () => {
     setNumPages(numPages);
   };
 
-  return { renderPage, loadPdfDoc, pdfDoc, numPages };
+  const updatePagesInViewOnScrollDown = async (pagesInView: pagesInViewArray) => {
+    const newPagesInView = [...pagesInView];
+    const newPageIndex = pagesInView[pagesInView.length - 1].index + 1;
+    const pageImgUrl = await renderPage(pdfDoc, newPageIndex + 1);
+    // remove index of first page in array
+    newPagesInView.shift();
+    // push index of page after last in array
+    newPagesInView.push({
+      index: newPageIndex,
+      url: pageImgUrl,
+    });
+    return newPagesInView;
+  };
+
+  const updatePagesInViewOnScrollUp = async (pagesInView: pagesInViewArray) => {
+    const newPagesInView = [...pagesInView];
+    const newPageIndex = pagesInView[0].index - 1;
+    const pageImgUrl = await renderPage(pdfDoc, newPageIndex + 1);
+    // remove index of last page in array
+    newPagesInView.pop();
+    // push index of page before first in array
+    newPagesInView.unshift({ index: newPageIndex, url: pageImgUrl });
+    return newPagesInView;
+  };
+
+  return {
+    renderPage,
+    loadPdfDoc,
+    updatePagesInViewOnScrollDown,
+    updatePagesInViewOnScrollUp,
+    pdfDoc,
+    numPages,
+  };
 };
 
 export default usePdf;

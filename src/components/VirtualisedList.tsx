@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { PDFDocumentProxy } from "pdfjs-dist";
+import { pagesInViewArray } from "../types";
 
 interface VirtualisedListProps {
   numPages: number;
@@ -11,6 +12,8 @@ interface VirtualisedListProps {
   currentPageIndex: number;
   setCurrentPageIndex: (pageIndex: number) => void;
   renderPage: (pdf: PDFDocumentProxy, pageNum: number) => Promise<string>;
+  updatePagesInViewOnScrollDown: (pagesInView: pagesInViewArray) => Promise<pagesInViewArray>;
+  updatePagesInViewOnScrollUp: (pagesInView: pagesInViewArray) => Promise<pagesInViewArray>;
   scale: number;
 }
 
@@ -26,6 +29,8 @@ const VirtualisedList = ({
   currentPageIndex,
   setCurrentPageIndex,
   renderPage,
+  updatePagesInViewOnScrollDown,
+  updatePagesInViewOnScrollUp,
   scale,
 }: VirtualisedListProps) => {
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -88,24 +93,10 @@ const VirtualisedList = ({
     }
   }, [numPages, pdfDoc]);
 
-  // update the pagesInView array when page index change, if needed
+  // update pagesInView when scrolling, if needed
   useEffect(() => {
     // pagesInView is loaded async
     if (!pagesInView.length) return;
-
-    const updatePagesInViewOnScrollDown = async () => {
-      const newPagesInView = [...pagesInView];
-      const newPageIndex = pagesInView[pagesInView.length - 1].index + 1;
-      const pageImgUrl = await renderPage(pdfDoc, newPageIndex + 1);
-      // remove index of first page in array
-      newPagesInView.shift();
-      // push index of page after last in array
-      newPagesInView.push({
-        index: newPageIndex,
-        url: pageImgUrl,
-      });
-      return newPagesInView;
-    };
 
     // if crossing from middle to second to last page in pagesInView
     // and last page in pagesInView does not match numPages - 1
@@ -113,26 +104,15 @@ const VirtualisedList = ({
       currentPageIndex === pagesInView[pagesInView.length - 2].index &&
       pagesInView[pagesInView.length - 1].index !== numPages - 1
     ) {
-      updatePagesInViewOnScrollDown().then((pagesInView) => {
+      updatePagesInViewOnScrollDown(pagesInView).then((pagesInView) => {
         setPagesInView(pagesInView);
       });
     }
 
-    const updatePagesInViewOnScrollUp = async () => {
-      const newPagesInView = [...pagesInView];
-      const newPageIndex = pagesInView[0].index - 1;
-      const pageImgUrl = await renderPage(pdfDoc, newPageIndex + 1);
-      // remove index of last page in array
-      newPagesInView.pop();
-      // push index of page before first in array
-      newPagesInView.unshift({ index: newPageIndex, url: pageImgUrl });
-      return newPagesInView;
-    };
-
     // if crossing from middle to second page in pagesInView
     // and first page in pagesInView does not match 0
     if (currentPageIndex === pagesInView[1].index && pagesInView[0].index !== 0) {
-      updatePagesInViewOnScrollUp().then((pagesInView) => setPagesInView(pagesInView));
+      updatePagesInViewOnScrollUp(pagesInView).then((pagesInView) => setPagesInView(pagesInView));
     }
   }, [currentPageIndex]);
 
