@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import usePdf from "./hooks/usePdf";
 import { PDFDocumentProxy } from "pdfjs-dist";
 
 interface VirtualisedListProps {
@@ -9,6 +8,9 @@ interface VirtualisedListProps {
   viewportWidth: number;
   viewportHeight: number;
   pdfDoc: PDFDocumentProxy | null;
+  currentPageIndex: number;
+  setCurrentPageIndex: (pageIndex: number) => void;
+  renderPage: (pdf: PDFDocumentProxy, pageNum: number) => Promise<string>;
 }
 
 const VirtualisedList = ({
@@ -18,11 +20,11 @@ const VirtualisedList = ({
   viewportWidth,
   viewportHeight,
   pdfDoc,
+  currentPageIndex,
+  setCurrentPageIndex,
+  renderPage,
 }: VirtualisedListProps) => {
   const [pagesInView, setPagesInView] = useState<{ index: number; url: string }[]>([]);
-  const [currentPageIndex, setCurrentPageIndex] = useState<number>(0);
-
-  const { renderPage } = usePdf();
 
   const viewportRef = useRef<HTMLDivElement>(null);
   const effectivePageHeight = pageHeight + pageSpacing;
