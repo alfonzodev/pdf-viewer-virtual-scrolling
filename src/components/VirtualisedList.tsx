@@ -11,7 +11,10 @@ interface VirtualisedListProps {
   currentPageIndex: number;
   setCurrentPageIndex: (pageIndex: number) => void;
   renderPage: (pdf: PDFDocumentProxy, pageNum: number) => Promise<string>;
+  scale: number;
 }
+
+const RATIO_ISO_216_PAPER_SIZE = Math.sqrt(2);
 
 const VirtualisedList = ({
   numPages,
@@ -23,10 +26,15 @@ const VirtualisedList = ({
   currentPageIndex,
   setCurrentPageIndex,
   renderPage,
+  scale,
 }: VirtualisedListProps) => {
+  const viewportRef = useRef<HTMLDivElement>(null);
+
   const [pagesInView, setPagesInView] = useState<{ index: number; url: string }[]>([]);
 
-  const viewportRef = useRef<HTMLDivElement>(null);
+  // Apply Scale to Page Height (Zoomed in or Zoomed out)
+  pageHeight = pageHeight * scale;
+
   const effectivePageHeight = pageHeight + pageSpacing;
 
   const handleScroll = () => {
@@ -113,29 +121,33 @@ const VirtualisedList = ({
   return (
     <div
       style={{ width: `${viewportWidth}px`, height: `${viewportHeight}px` }}
-      className="py-2 flex justify-center items-center overflow-y-scroll relative"
+      className="overflow-scroll relative bg-[#f5f5f5] px-10"
       ref={viewportRef}
       onScroll={handleScroll}
     >
       <div
-        style={{ top: "0px", height: `${numPages * pageHeight + (numPages + 1) * pageSpacing}px` }}
-        className="absolute  bg-white w-full flex flex-col justify-center items-center"
+        style={{
+          height: `${numPages * pageHeight + (numPages + 1) * pageSpacing}px`,
+          width: `${pageHeight / RATIO_ISO_216_PAPER_SIZE}px`,
+        }}
+        className="relative mx-auto"
       >
         {pagesInView.length > 0 &&
           pagesInView.map(({ index, url }) => {
             const top = index * pageHeight + pageSpacing * (index + 1);
 
             return (
-              <img
+              <div
                 key={`page-${index + 1}`}
                 style={{
                   height: `${pageHeight}px`,
+                  width: `${pageHeight / RATIO_ISO_216_PAPER_SIZE}px`,
                   top: `${top}px`,
                 }}
-                alt={`page ${index} of the x doc`}
-                src={url}
-                className="absolute border border-black w-auto"
-              />
+                className="absolute shadow-md border border-gray-50 p-1 flex justify-center items-center bg-white"
+              >
+                <img alt={`page ${index + 1} of the x doc`} src={url} className="w-auto h-auto" />
+              </div>
             );
           })}
       </div>

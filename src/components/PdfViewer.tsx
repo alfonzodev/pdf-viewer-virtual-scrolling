@@ -7,6 +7,7 @@ const PdfViewer = ({ file }: { file: File | null }) => {
   const { loadPdfDoc, pdfDoc, numPages, renderPage } = usePdf();
 
   const [currentPageIndex, setCurrentPageIndex] = useState<number>(0);
+  const [scale, setScale] = useState<number>(1);
 
   useEffect(() => {
     if (file) {
@@ -22,13 +23,14 @@ const PdfViewer = ({ file }: { file: File | null }) => {
       <VirtualisedList
         currentPageIndex={currentPageIndex}
         renderPage={renderPage}
+        scale={scale}
         setCurrentPageIndex={setCurrentPageIndex}
         pdfDoc={pdfDoc}
         viewportWidth={500}
         viewportHeight={500}
         numPages={numPages}
         pageHeight={600}
-        pageSpacing={10}
+        pageSpacing={15}
       />
     </div>
   );
