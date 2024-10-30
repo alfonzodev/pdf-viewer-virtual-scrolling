@@ -14,6 +14,10 @@ The reason for chosing 5 pages is to create this type of scrolling experience:
 - Add initial loading screen.
 - Improve responsiveness for really fast scrolling. Show a loading message and render 5 pages surrounding the user's current position in the document when he stops scrolling.
 - Make preview responsive.
+- Controls:
+  - Zoom In / Out.
+  - Page Number Input.
+  - Page Up / Down.
 
 ### Notes
 
