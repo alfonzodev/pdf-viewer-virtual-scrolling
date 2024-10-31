@@ -50,13 +50,27 @@ const usePdf = () => {
     setNumPages(numPages);
   };
 
-  const updatePagesInViewOnScrollDown = async (pagesInView: pagesInViewArray) => {
+  const prependPageInView = async (
+    pdfDoc: pdfjs.PDFDocumentProxy,
+    pagesInView: pagesInViewArray
+  ) => {
+    const newPagesInView = [...pagesInView];
+    const newPageIndex = pagesInView[0].index - 1;
+    const pageImgUrl = await renderPage(pdfDoc, newPageIndex + 1);
+    // add page to start of queue
+    newPagesInView.unshift({ index: newPageIndex, url: pageImgUrl });
+
+    return newPagesInView;
+  };
+
+  const appendPageInView = async (
+    pdfDoc: pdfjs.PDFDocumentProxy,
+    pagesInView: pagesInViewArray
+  ) => {
     const newPagesInView = [...pagesInView];
     const newPageIndex = pagesInView[pagesInView.length - 1].index + 1;
     const pageImgUrl = await renderPage(pdfDoc, newPageIndex + 1);
-    // remove index of first page in array
-    newPagesInView.shift();
-    // push index of page after last in array
+    // add page to rear of queue
     newPagesInView.push({
       index: newPageIndex,
       url: pageImgUrl,
@@ -64,22 +78,11 @@ const usePdf = () => {
     return newPagesInView;
   };
 
-  const updatePagesInViewOnScrollUp = async (pagesInView: pagesInViewArray) => {
-    const newPagesInView = [...pagesInView];
-    const newPageIndex = pagesInView[0].index - 1;
-    const pageImgUrl = await renderPage(pdfDoc, newPageIndex + 1);
-    // remove index of last page in array
-    newPagesInView.pop();
-    // push index of page before first in array
-    newPagesInView.unshift({ index: newPageIndex, url: pageImgUrl });
-    return newPagesInView;
-  };
-
   return {
     renderPage,
     loadPdfDoc,
-    updatePagesInViewOnScrollDown,
-    updatePagesInViewOnScrollUp,
+    prependPageInView,
+    appendPageInView,
     pdfDoc,
     numPages,
   };

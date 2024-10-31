@@ -12,8 +12,14 @@ interface VirtualisedListProps {
   currentPageIndex: number;
   setCurrentPageIndex: (pageIndex: number) => void;
   renderPage: (pdf: PDFDocumentProxy, pageNum: number) => Promise<string>;
-  updatePagesInViewOnScrollDown: (pagesInView: pagesInViewArray) => Promise<pagesInViewArray>;
-  updatePagesInViewOnScrollUp: (pagesInView: pagesInViewArray) => Promise<pagesInViewArray>;
+  appendPageInView: (
+    pdfDoc: PDFDocumentProxy,
+    pagesInView: pagesInViewArray
+  ) => Promise<pagesInViewArray>;
+  prependPageInView: (
+    pdfDoc: PDFDocumentProxy,
+    pagesInView: pagesInViewArray
+  ) => Promise<pagesInViewArray>;
   scale: number;
 }
 
@@ -29,8 +35,8 @@ const VirtualisedList = ({
   currentPageIndex,
   setCurrentPageIndex,
   renderPage,
-  updatePagesInViewOnScrollDown,
-  updatePagesInViewOnScrollUp,
+  appendPageInView,
+  prependPageInView,
   scale,
 }: VirtualisedListProps) => {
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -75,6 +81,7 @@ const VirtualisedList = ({
   // leave this in useEffect, because numPages is going to change
   // when pdf file loaded from 0 to X
   useEffect(() => {
+    if (!pdfDoc) return;
     const loadPages = async () => {
       const pagesInView = [];
       for (let i = 0; i < Math.min(numPages, 5); i++) {
@@ -93,28 +100,34 @@ const VirtualisedList = ({
     }
   }, [numPages, pdfDoc]);
 
-  // update pagesInView when scrolling, if needed
+  // update pagesInView when scrolling
   useEffect(() => {
-    // pagesInView is loaded async
-    if (!pagesInView.length) return;
+    if (!pdfDoc) return;
+    if (pagesInView.length < 0) return;
 
-    // if crossing from middle to second to last page in pagesInView
-    // and last page in pagesInView does not match numPages - 1
+    // if scrolling down past the middle page in pagesInView
     if (
       currentPageIndex === pagesInView[pagesInView.length - 2].index &&
       pagesInView[pagesInView.length - 1].index !== numPages - 1
     ) {
-      updatePagesInViewOnScrollDown(pagesInView).then((pagesInView) => {
+      appendPageInView(pdfDoc, pagesInView).then((pagesInView) => {
+        // remove page from front of queue
+        pagesInView.shift();
         setPagesInView(pagesInView);
       });
     }
 
-    // if crossing from middle to second page in pagesInView
-    // and first page in pagesInView does not match 0
+    // if scrolling up past the middle page in pagesInView
     if (currentPageIndex === pagesInView[1].index && pagesInView[0].index !== 0) {
-      updatePagesInViewOnScrollUp(pagesInView).then((pagesInView) => setPagesInView(pagesInView));
+      prependPageInView(pdfDoc, pagesInView).then((pagesInView) => {
+        // remove page from rear of queue
+        pagesInView.pop();
+        setPagesInView(pagesInView);
+      });
     }
   }, [currentPageIndex]);
+
+  // update pagesInView when zooming out (add pages)
 
   return (
     <div
