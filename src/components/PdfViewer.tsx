@@ -5,7 +5,7 @@ import VirtualisedList from "./VirtualisedList";
 import Controls from "./Controls";
 
 const PdfViewer = ({ file }: { file: File | null }) => {
-  const { loadPdfDoc, pdfDoc, numPages, renderPage, prependPageInView, appendPageInView } =
+  const { loadPdfDoc, pdfDoc, numPages, renderPage, prependPagesInView, appendPagesInView } =
     usePdf();
 
   const [currentPageIndex, setCurrentPageIndex] = useState<number>(0);
@@ -33,8 +33,8 @@ const PdfViewer = ({ file }: { file: File | null }) => {
         numPages={numPages}
         pageHeight={600}
         pageSpacing={15}
-        prependPageInView={prependPageInView}
-        appendPageInView={appendPageInView}
+        prependPagesInView={prependPagesInView}
+        appendPagesInView={appendPagesInView}
       />
       <Controls
         setScale={setScale}

@@ -12,11 +12,13 @@ interface VirtualisedListProps {
   currentPageIndex: number;
   setCurrentPageIndex: (pageIndex: number) => void;
   renderPage: (pdf: PDFDocumentProxy, pageNum: number) => Promise<string>;
-  appendPageInView: (
+  appendPagesInView: (
+    appendAmount: number,
     pdfDoc: PDFDocumentProxy,
     pagesInView: pagesInViewArray
   ) => Promise<pagesInViewArray>;
-  prependPageInView: (
+  prependPagesInView: (
+    prependAmount: number,
     pdfDoc: PDFDocumentProxy,
     pagesInView: pagesInViewArray
   ) => Promise<pagesInViewArray>;
@@ -35,8 +37,8 @@ const VirtualisedList = ({
   currentPageIndex,
   setCurrentPageIndex,
   renderPage,
-  appendPageInView,
-  prependPageInView,
+  appendPagesInView,
+  prependPagesInView,
   scale,
 }: VirtualisedListProps) => {
   const viewportRef = useRef<HTMLDivElement>(null);
@@ -59,8 +61,6 @@ const VirtualisedList = ({
         const newScrollPosition = (scale * currentScrollPosition) / previousScaleRef.current;
         viewportRef.current.scrollTop = newScrollPosition;
       }
-
-      previousScaleRef.current = scale;
     }
   }, [scale, numPages, pageHeight, pageSpacing]);
 
@@ -104,13 +104,14 @@ const VirtualisedList = ({
   useEffect(() => {
     if (!pdfDoc) return;
     if (pagesInView.length < 0) return;
+    const middlePointPagesInView = Math.floor(pagesInView.length / 2);
 
     // if scrolling down past the middle page in pagesInView
     if (
-      currentPageIndex === pagesInView[pagesInView.length - 2].index &&
+      currentPageIndex === pagesInView[middlePointPagesInView + 1].index &&
       pagesInView[pagesInView.length - 1].index !== numPages - 1
     ) {
-      appendPageInView(pdfDoc, pagesInView).then((pagesInView) => {
+      appendPagesInView(1, pdfDoc, pagesInView).then((pagesInView) => {
         // remove page from front of queue
         pagesInView.shift();
         setPagesInView(pagesInView);
@@ -118,16 +119,17 @@ const VirtualisedList = ({
     }
 
     // if scrolling up past the middle page in pagesInView
-    if (currentPageIndex === pagesInView[1].index && pagesInView[0].index !== 0) {
-      prependPageInView(pdfDoc, pagesInView).then((pagesInView) => {
+    if (
+      currentPageIndex === pagesInView[middlePointPagesInView - 1].index &&
+      pagesInView[0].index !== 0
+    ) {
+      prependPagesInView(1, pdfDoc, pagesInView).then((pagesInView) => {
         // remove page from rear of queue
         pagesInView.pop();
         setPagesInView(pagesInView);
       });
     }
   }, [currentPageIndex]);
-
-  // update pagesInView when zooming out (add pages)
 
   return (
     <div
