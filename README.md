@@ -12,7 +12,7 @@ The reason for chosing 5 pages is to create this type of scrolling experience:
 ### To be added
 
 - Add initial loading screen.
-- Improve responsiveness for really fast scrolling. Show a loading message and render 5 pages surrounding the user's current position in the document when he stops scrolling.
+- Fix race conditions of rendering pdf pages when user scrolls fast. ✅
 - Make preview responsive.
 - Controls:
   - Zoom In / Out. ✅

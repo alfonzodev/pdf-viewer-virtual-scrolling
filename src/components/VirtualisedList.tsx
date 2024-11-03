@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { PDFDocumentProxy } from "pdfjs-dist";
 import { pagesInViewArray } from "../types";
 
@@ -43,13 +43,60 @@ const VirtualisedList = ({
 }: VirtualisedListProps) => {
   const viewportRef = useRef<HTMLDivElement>(null);
   const previousScaleRef = useRef(scale);
+  const previousPageIndexRef = useRef(currentPageIndex);
 
   const [pagesInView, setPagesInView] = useState<{ index: number; url: string }[]>([]);
 
-  // Apply Scale to Page Height (Zoomed in or Zoomed out)
+  // Queue system for managing async operations (Prevent race conditions)
+  type QueueOperation = (currentPagesInView: typeof pagesInView) => Promise<typeof pagesInView>;
+  const operationQueueRef = useRef<QueueOperation[]>([]);
+  const isProcessingRef = useRef(false);
+  const latestPagesInViewRef = useRef(pagesInView);
+
+  // Keep latestPagesInViewRef in sync with currentPages state
+  useEffect(() => {
+    latestPagesInViewRef.current = pagesInView;
+  }, [pagesInView]);
+
+  // Process the queue of async operations
+  const processQueue = useCallback(async () => {
+    // if processing return. the current while loop will handle new operations added to the operationQueue
+    if (isProcessingRef.current) return;
+
+    if (operationQueueRef.current.length === 0) return;
+
+    try {
+      isProcessingRef.current = true;
+
+      while (operationQueueRef.current.length > 0) {
+        const operation = operationQueueRef.current[0];
+        operationQueueRef.current.shift();
+
+        // Each operation receives the latest pages in view from the ref
+        const currentPagesInView = await operation(latestPagesInViewRef.current);
+        // Update react state
+        setPagesInView(currentPagesInView);
+        // Update our latest pages in view ref immediately
+        latestPagesInViewRef.current = currentPagesInView;
+      }
+    } finally {
+      isProcessingRef.current = false;
+    }
+  }, []);
+
+  // Add operation to queue
+  const enqueOperation = useCallback(
+    (operation: QueueOperation) => {
+      operationQueueRef.current.push(operation);
+      processQueue();
+    },
+    [processQueue]
+  );
+
+  // Apply scale to page height (zoomed in or zoomed out)
   pageHeight = pageHeight * scale;
 
-  // Calculate Pdf Container Height based on Page Height and Number of Pages
+  // Calculate pdf container height based on page height and number of pages
   const pdfContainerHeight = numPages * pageHeight + (numPages + 1) * pageSpacing;
 
   // Update scroll position on new scale
@@ -66,24 +113,24 @@ const VirtualisedList = ({
 
   const effectivePageHeight = pageHeight + pageSpacing;
 
+  // Update current page index on scroll
   const handleScroll = () => {
     if (viewportRef.current) {
       const { scrollTop } = viewportRef.current;
       const pageCalc = scrollTop / effectivePageHeight;
       const newPageIndex = Math.floor(pageCalc);
       if (newPageIndex !== currentPageIndex) {
+        previousPageIndexRef.current = currentPageIndex;
         setCurrentPageIndex(newPageIndex);
       }
     }
   };
 
-  // loading initial 5 or less pages
-  // leave this in useEffect, because numPages is going to change
-  // when pdf file loaded from 0 to X
+  // Load initial 5 or less pages
   useEffect(() => {
     if (!pdfDoc) return;
-    const loadPages = async () => {
-      const pagesInView = [];
+    enqueOperation(async (currentPagesInView) => {
+      const pagesInView = [...currentPagesInView];
       for (let i = 0; i < Math.min(numPages, 5); i++) {
         const pageImgUrl = await renderPage(pdfDoc, i + 1);
         pagesInView.push({
@@ -92,44 +139,50 @@ const VirtualisedList = ({
         });
       }
       return pagesInView;
-    };
-    if (pdfDoc) {
-      loadPages().then((pagesInView) => {
-        setPagesInView(pagesInView);
-      });
-    }
-  }, [numPages, pdfDoc]);
+    });
+  }, [numPages, pdfDoc, enqueOperation, renderPage]);
 
-  // update pagesInView when scrolling
+  // Update pagesInView when scrolling
   useEffect(() => {
     if (!pdfDoc) return;
-    if (pagesInView.length < 0) return;
-    const middlePointPagesInView = Math.floor(pagesInView.length / 2);
 
-    // if scrolling down past the middle page in pagesInView
-    if (
-      currentPageIndex === pagesInView[middlePointPagesInView + 1].index &&
-      pagesInView[pagesInView.length - 1].index !== numPages - 1
-    ) {
-      appendPagesInView(1, pdfDoc, pagesInView).then((pagesInView) => {
-        // remove page from front of queue
-        pagesInView.shift();
-        setPagesInView(pagesInView);
+    // If scrolling down
+    if (currentPageIndex > previousPageIndexRef.current) {
+      enqueOperation(async (currentPagesInView) => {
+        const midPointPagesInView = Math.floor(currentPagesInView.length / 2);
+        // If user is past mid point of currentPagesInView batch and batch did not reach the EOF
+        if (
+          currentPageIndex > currentPagesInView[midPointPagesInView].index &&
+          currentPagesInView[currentPagesInView.length - 1].index !== numPages - 1
+        ) {
+          const updatedPagesInView = await appendPagesInView(1, pdfDoc, currentPagesInView);
+          updatedPagesInView.shift();
+          return updatedPagesInView;
+        }
+        // Return unchanged current pages if no change needed
+        return currentPagesInView;
       });
     }
 
-    // if scrolling up past the middle page in pagesInView
-    if (
-      currentPageIndex === pagesInView[middlePointPagesInView - 1].index &&
-      pagesInView[0].index !== 0
-    ) {
-      prependPagesInView(1, pdfDoc, pagesInView).then((pagesInView) => {
-        // remove page from rear of queue
-        pagesInView.pop();
-        setPagesInView(pagesInView);
+    // If scrolling up
+    if (currentPageIndex < previousPageIndexRef.current) {
+      enqueOperation(async (currentPagesInView) => {
+        const midPointPagesInView = Math.floor(currentPagesInView.length / 2);
+        //  if user is behind mid point of pagesInView batch and batch did not reach the BOF
+        if (
+          currentPageIndex < currentPagesInView[midPointPagesInView].index &&
+          currentPagesInView[0].index !== 0
+        ) {
+          const updatedPagesInView = await prependPagesInView(1, pdfDoc, currentPagesInView);
+          updatedPagesInView.pop();
+          // Return updated current pages for next operation in the queue
+          return updatedPagesInView;
+        }
+        // Return unchanged current pages if no change needed
+        return currentPagesInView;
       });
     }
-  }, [currentPageIndex]);
+  }, [currentPageIndex, numPages, pdfDoc, enqueOperation, appendPagesInView, prependPagesInView]);
 
   return (
     <div

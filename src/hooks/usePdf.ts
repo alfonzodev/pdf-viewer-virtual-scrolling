@@ -1,5 +1,5 @@
 import * as pdfjs from "pdfjs-dist";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { pagesInViewArray } from "../types";
 
 const usePdf = () => {
@@ -8,7 +8,7 @@ const usePdf = () => {
   const [pdfDoc, setPdfDoc] = useState<pdfjs.PDFDocumentProxy | null>(null);
   const [numPages, setNumPages] = useState<number>(0);
 
-  const renderPage = async (pdf: pdfjs.PDFDocumentProxy, pageNum: number) => {
+  const renderPage = useCallback(async (pdf: pdfjs.PDFDocumentProxy, pageNum: number) => {
     const page = await pdf.getPage(pageNum);
     const scale = 1.5;
     const viewport = page.getViewport({ scale });
@@ -40,7 +40,7 @@ const usePdf = () => {
 
     const pageImageUrl = URL.createObjectURL(blob);
     return pageImageUrl;
-  };
+  }, []);
 
   const loadPdfDoc = async (file: File) => {
     const fileArrayBuffer = await file.arrayBuffer();
@@ -50,39 +50,41 @@ const usePdf = () => {
     setNumPages(numPages);
   };
 
-  const prependPagesInView = async (
-    prependAmount: number,
-    pdfDoc: pdfjs.PDFDocumentProxy,
-    pagesInView: pagesInViewArray
-  ) => {
-    const newPagesInView = [...pagesInView];
-    for (let i = 0; i < prependAmount; i++) {
-      const newPageIndex = newPagesInView[0].index - 1;
-      const pageImgUrl = await renderPage(pdfDoc, newPageIndex + 1);
-      // add page to start of queue
-      newPagesInView.unshift({ index: newPageIndex, url: pageImgUrl });
-    }
+  const prependPagesInView = useCallback(
+    async (
+      prependAmount: number,
+      pdfDoc: pdfjs.PDFDocumentProxy,
+      pagesInView: pagesInViewArray
+    ) => {
+      const newPagesInView = [...pagesInView];
+      for (let i = 0; i < prependAmount; i++) {
+        const newPageIndex = newPagesInView[0].index - 1;
+        const pageImgUrl = await renderPage(pdfDoc, newPageIndex + 1);
+        // add page to start of queue
+        newPagesInView.unshift({ index: newPageIndex, url: pageImgUrl });
+      }
 
-    return newPagesInView;
-  };
+      return newPagesInView;
+    },
+    [renderPage]
+  );
 
-  const appendPagesInView = async (
-    appendAmount: number,
-    pdfDoc: pdfjs.PDFDocumentProxy,
-    pagesInView: pagesInViewArray
-  ) => {
-    const newPagesInView = [...pagesInView];
-    for (let i = 0; i < appendAmount; i++) {
-      const newPageIndex = newPagesInView[newPagesInView.length - 1].index + 1;
-      const pageImgUrl = await renderPage(pdfDoc, newPageIndex + 1);
-      // add page to rear of queue
-      newPagesInView.push({
-        index: newPageIndex,
-        url: pageImgUrl,
-      });
-    }
-    return newPagesInView;
-  };
+  const appendPagesInView = useCallback(
+    async (appendAmount: number, pdfDoc: pdfjs.PDFDocumentProxy, pagesInView: pagesInViewArray) => {
+      const newPagesInView = [...pagesInView];
+      for (let i = 0; i < appendAmount; i++) {
+        const newPageIndex = newPagesInView[newPagesInView.length - 1].index + 1;
+        const pageImgUrl = await renderPage(pdfDoc, newPageIndex + 1);
+        // add page to rear of queue
+        newPagesInView.push({
+          index: newPageIndex,
+          url: pageImgUrl,
+        });
+      }
+      return newPagesInView;
+    },
+    [renderPage]
+  );
 
   return {
     renderPage,
