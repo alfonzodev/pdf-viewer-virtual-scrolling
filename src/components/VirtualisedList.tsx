@@ -9,8 +9,8 @@ interface VirtualisedListProps {
   viewportWidth: number;
   viewportHeight: number;
   pdfDoc: PDFDocumentProxy | null;
-  currentPageIndex: number;
-  setCurrentPageIndex: (pageIndex: number) => void;
+  currentPage: number;
+  setCurrentPage: (pageIndex: number) => void;
   renderPage: (pdf: PDFDocumentProxy, pageNum: number) => Promise<string>;
   appendPagesInView: (
     appendAmount: number,
@@ -34,8 +34,8 @@ const VirtualisedList = ({
   viewportWidth,
   viewportHeight,
   pdfDoc,
-  currentPageIndex,
-  setCurrentPageIndex,
+  currentPage,
+  setCurrentPage,
   renderPage,
   appendPagesInView,
   prependPagesInView,
@@ -43,9 +43,9 @@ const VirtualisedList = ({
 }: VirtualisedListProps) => {
   const viewportRef = useRef<HTMLDivElement>(null);
   const previousScaleRef = useRef(scale);
-  const previousPageIndexRef = useRef(currentPageIndex);
+  const previousPageRef = useRef(currentPage);
 
-  const [pagesInView, setPagesInView] = useState<{ index: number; url: string }[]>([]);
+  const [pagesInView, setPagesInView] = useState<{ page: number; url: string }[]>([]);
 
   // Queue system for managing async operations (Prevent race conditions)
   type QueueOperation = (currentPagesInView: typeof pagesInView) => Promise<typeof pagesInView>;
@@ -117,11 +117,11 @@ const VirtualisedList = ({
   const handleScroll = () => {
     if (viewportRef.current) {
       const { scrollTop } = viewportRef.current;
-      const pageCalc = scrollTop / effectivePageHeight;
-      const newPageIndex = Math.floor(pageCalc);
-      if (newPageIndex !== currentPageIndex) {
-        previousPageIndexRef.current = currentPageIndex;
-        setCurrentPageIndex(newPageIndex);
+      const pageCalc = (scrollTop + 1) / effectivePageHeight;
+      const newPage = Math.ceil(pageCalc);
+      if (newPage !== currentPage) {
+        previousPageRef.current = currentPage;
+        setCurrentPage(newPage);
       }
     }
   };
@@ -131,10 +131,10 @@ const VirtualisedList = ({
     if (!pdfDoc) return;
     enqueOperation(async (currentPagesInView) => {
       const pagesInView = [...currentPagesInView];
-      for (let i = 0; i < Math.min(numPages, 5); i++) {
-        const pageImgUrl = await renderPage(pdfDoc, i + 1);
+      for (let i = 1; i <= Math.min(numPages, 5); i++) {
+        const pageImgUrl = await renderPage(pdfDoc, i);
         pagesInView.push({
-          index: i,
+          page: i,
           url: pageImgUrl,
         });
       }
@@ -147,13 +147,13 @@ const VirtualisedList = ({
     if (!pdfDoc) return;
 
     // If scrolling down
-    if (currentPageIndex > previousPageIndexRef.current) {
+    if (currentPage > previousPageRef.current) {
       enqueOperation(async (currentPagesInView) => {
         const midPointPagesInView = Math.floor(currentPagesInView.length / 2);
         // If user is past mid point of currentPagesInView batch and batch did not reach the EOF
         if (
-          currentPageIndex > currentPagesInView[midPointPagesInView].index &&
-          currentPagesInView[currentPagesInView.length - 1].index !== numPages - 1
+          currentPage > currentPagesInView[midPointPagesInView].page &&
+          currentPagesInView[currentPagesInView.length - 1].page !== numPages
         ) {
           const updatedPagesInView = await appendPagesInView(1, pdfDoc, currentPagesInView);
           updatedPagesInView.shift();
@@ -165,13 +165,13 @@ const VirtualisedList = ({
     }
 
     // If scrolling up
-    if (currentPageIndex < previousPageIndexRef.current) {
+    if (currentPage < previousPageRef.current) {
       enqueOperation(async (currentPagesInView) => {
         const midPointPagesInView = Math.floor(currentPagesInView.length / 2);
         //  if user is behind mid point of pagesInView batch and batch did not reach the BOF
         if (
-          currentPageIndex < currentPagesInView[midPointPagesInView].index &&
-          currentPagesInView[0].index !== 0
+          currentPage < currentPagesInView[midPointPagesInView].page &&
+          currentPagesInView[0].page !== 1
         ) {
           const updatedPagesInView = await prependPagesInView(1, pdfDoc, currentPagesInView);
           updatedPagesInView.pop();
@@ -182,7 +182,7 @@ const VirtualisedList = ({
         return currentPagesInView;
       });
     }
-  }, [currentPageIndex, numPages, pdfDoc, enqueOperation, appendPagesInView, prependPagesInView]);
+  }, [currentPage, numPages, pdfDoc, enqueOperation, appendPagesInView, prependPagesInView]);
 
   return (
     <div
@@ -200,12 +200,12 @@ const VirtualisedList = ({
         className="relative mx-auto"
       >
         {pagesInView.length > 0 &&
-          pagesInView.map(({ index, url }) => {
-            const top = index * pageHeight + pageSpacing * (index + 1);
+          pagesInView.map(({ page, url }) => {
+            const top = (page - 1) * pageHeight + pageSpacing * page;
 
             return (
               <div
-                key={`page-${index + 1}`}
+                key={`page-${page}`}
                 style={{
                   height: `${pageHeight}px`,
                   width: `${pageHeight / RATIO_ISO_216_PAPER_SIZE}px`,
@@ -214,7 +214,7 @@ const VirtualisedList = ({
                 className="absolute shadow-md border border-gray-50 p-2 flex justify-center items-center bg-white"
               >
                 <img
-                  alt={`page ${index + 1} of the x doc`}
+                  alt={`page ${page} of the x doc`}
                   src={url}
                   className="w-auto h-auto max-h-full max-w-full"
                 />

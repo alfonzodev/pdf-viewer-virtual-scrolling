@@ -8,7 +8,7 @@ const PdfViewer = ({ file }: { file: File | null }) => {
   const { loadPdfDoc, pdfDoc, numPages, renderPage, prependPagesInView, appendPagesInView } =
     usePdf();
 
-  const [currentPageIndex, setCurrentPageIndex] = useState<number>(0);
+  const [currentPage, setCurrentPage] = useState<number>(1);
   const [scale, setScale] = useState<number>(1);
 
   useEffect(() => {
@@ -23,10 +23,10 @@ const PdfViewer = ({ file }: { file: File | null }) => {
         {file && <h1 className="font-medium text-sm">{file.name}</h1>}
       </div>
       <VirtualisedList
-        currentPageIndex={currentPageIndex}
+        currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
         renderPage={renderPage}
         scale={scale}
-        setCurrentPageIndex={setCurrentPageIndex}
         pdfDoc={pdfDoc}
         viewportWidth={500}
         viewportHeight={500}
@@ -36,12 +36,7 @@ const PdfViewer = ({ file }: { file: File | null }) => {
         prependPagesInView={prependPagesInView}
         appendPagesInView={appendPagesInView}
       />
-      <Controls
-        setScale={setScale}
-        currentPageIndex={currentPageIndex}
-        numPages={numPages}
-        pdfDoc={pdfDoc}
-      />
+      <Controls setScale={setScale} currentPage={currentPage} numPages={numPages} pdfDoc={pdfDoc} />
     </div>
   );
 };

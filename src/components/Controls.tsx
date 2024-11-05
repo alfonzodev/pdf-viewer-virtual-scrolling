@@ -2,7 +2,7 @@ import { ChevronDown, ChevronUp, ZoomOut, ZoomIn } from "lucide-react";
 import { PDFDocumentProxy } from "pdfjs-dist";
 
 interface ControlsProps {
-  currentPageIndex: number;
+  currentPage: number;
   setScale: React.Dispatch<React.SetStateAction<number>>;
   numPages: number;
   pdfDoc: PDFDocumentProxy | null;
@@ -11,7 +11,7 @@ interface ControlsProps {
 const MIN_SCALE = 0.25;
 const MAX_SCALE = 2;
 
-const Controls = ({ setScale, currentPageIndex, numPages, pdfDoc }: ControlsProps) => {
+const Controls = ({ setScale, currentPage, numPages, pdfDoc }: ControlsProps) => {
   const handleZoomOut = () => {
     if (!pdfDoc) return;
     setScale((prevScale) => {
@@ -43,7 +43,7 @@ const Controls = ({ setScale, currentPageIndex, numPages, pdfDoc }: ControlsProp
           type="text"
           className="w-10 h-6 focus:outline-none bg-white border border-gray-800 text-center rounded-sm"
           readOnly
-          value={pdfDoc ? currentPageIndex + 1 : ""}
+          value={pdfDoc ? currentPage : ""}
         />
         <div className="border-r h-6 border-gray-700"></div>
         <p>{pdfDoc ? numPages : "---"}</p>

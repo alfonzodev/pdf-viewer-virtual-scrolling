@@ -1,1 +1,1 @@
-export type pagesInViewArray = { index: number; url: string }[];
+export type pagesInViewArray = { page: number; url: string }[];

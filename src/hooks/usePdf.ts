@@ -58,10 +58,10 @@ const usePdf = () => {
     ) => {
       const newPagesInView = [...pagesInView];
       for (let i = 0; i < prependAmount; i++) {
-        const newPageIndex = newPagesInView[0].index - 1;
-        const pageImgUrl = await renderPage(pdfDoc, newPageIndex + 1);
+        const newPage = newPagesInView[0].page - 1;
+        const pageImgUrl = await renderPage(pdfDoc, newPage);
         // add page to start of queue
-        newPagesInView.unshift({ index: newPageIndex, url: pageImgUrl });
+        newPagesInView.unshift({ page: newPage, url: pageImgUrl });
       }
 
       return newPagesInView;
@@ -73,11 +73,11 @@ const usePdf = () => {
     async (appendAmount: number, pdfDoc: pdfjs.PDFDocumentProxy, pagesInView: pagesInViewArray) => {
       const newPagesInView = [...pagesInView];
       for (let i = 0; i < appendAmount; i++) {
-        const newPageIndex = newPagesInView[newPagesInView.length - 1].index + 1;
-        const pageImgUrl = await renderPage(pdfDoc, newPageIndex + 1);
+        const newPage = newPagesInView[newPagesInView.length - 1].page + 1;
+        const pageImgUrl = await renderPage(pdfDoc, newPage);
         // add page to rear of queue
         newPagesInView.push({
-          index: newPageIndex,
+          page: newPage,
           url: pageImgUrl,
         });
       }
