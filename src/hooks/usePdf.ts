@@ -1,6 +1,6 @@
 import * as pdfjs from "pdfjs-dist";
 import { useState, useCallback } from "react";
-import { pagesInViewArray } from "../types";
+import { appendPagesInView, prependPagesInView } from "../types";
 
 const usePdf = () => {
   pdfjs.GlobalWorkerOptions.workerSrc = `//unpkg.com/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
@@ -50,12 +50,8 @@ const usePdf = () => {
     setNumPages(numPages);
   };
 
-  const prependPagesInView = useCallback(
-    async (
-      prependAmount: number,
-      pdfDoc: pdfjs.PDFDocumentProxy,
-      pagesInView: pagesInViewArray
-    ) => {
+  const prependPagesInView: prependPagesInView = useCallback(
+    async (prependAmount, pdfDoc, pagesInView) => {
       const newPagesInView = [...pagesInView];
       for (let i = 0; i < prependAmount; i++) {
         const newPage = newPagesInView[0].page - 1;
@@ -69,8 +65,8 @@ const usePdf = () => {
     [renderPage]
   );
 
-  const appendPagesInView = useCallback(
-    async (appendAmount: number, pdfDoc: pdfjs.PDFDocumentProxy, pagesInView: pagesInViewArray) => {
+  const appendPagesInView: appendPagesInView = useCallback(
+    async (appendAmount, pdfDoc, pagesInView) => {
       const newPagesInView = [...pagesInView];
       for (let i = 0; i < appendAmount; i++) {
         const newPage = newPagesInView[newPagesInView.length - 1].page + 1;

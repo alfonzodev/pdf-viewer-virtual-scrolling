@@ -1,29 +1,7 @@
-import { useEffect, useRef, useState, useCallback } from "react";
-import { PDFDocumentProxy } from "pdfjs-dist";
-import { pagesInViewArray } from "../types";
-
-interface VirtualisedListProps {
-  numPages: number;
-  pageHeight: number;
-  pageSpacing: number;
-  viewportWidth: number;
-  viewportHeight: number;
-  pdfDoc: PDFDocumentProxy | null;
-  currentPage: number;
-  setCurrentPage: (pageIndex: number) => void;
-  renderPage: (pdf: PDFDocumentProxy, pageNum: number) => Promise<string>;
-  appendPagesInView: (
-    appendAmount: number,
-    pdfDoc: PDFDocumentProxy,
-    pagesInView: pagesInViewArray
-  ) => Promise<pagesInViewArray>;
-  prependPagesInView: (
-    prependAmount: number,
-    pdfDoc: PDFDocumentProxy,
-    pagesInView: pagesInViewArray
-  ) => Promise<pagesInViewArray>;
-  scale: number;
-}
+import { useEffect, useRef } from "react";
+import { VirtualisedListProps } from "../types";
+import useVirtualisedList from "../hooks/useVirtualisedList";
+import { calculatePdfContainerHeight, calculateEffectivePageHeight } from "../utils";
 
 const RATIO_ISO_216_PAPER_SIZE = Math.sqrt(2);
 
@@ -45,59 +23,15 @@ const VirtualisedList = ({
   const previousScaleRef = useRef(scale);
   const previousPageRef = useRef(currentPage);
 
-  const [pagesInView, setPagesInView] = useState<{ page: number; url: string }[]>([]);
-
-  // Queue system for managing async operations (Prevent race conditions)
-  type QueueOperation = (currentPagesInView: typeof pagesInView) => Promise<typeof pagesInView>;
-  const operationQueueRef = useRef<QueueOperation[]>([]);
-  const isProcessingRef = useRef(false);
-  const latestPagesInViewRef = useRef(pagesInView);
-
-  // Keep latestPagesInViewRef in sync with currentPages state
-  useEffect(() => {
-    latestPagesInViewRef.current = pagesInView;
-  }, [pagesInView]);
-
-  // Process the queue of async operations
-  const processQueue = useCallback(async () => {
-    // if processing return. the current while loop will handle new operations added to the operationQueue
-    if (isProcessingRef.current) return;
-
-    if (operationQueueRef.current.length === 0) return;
-
-    try {
-      isProcessingRef.current = true;
-
-      while (operationQueueRef.current.length > 0) {
-        const operation = operationQueueRef.current[0];
-        operationQueueRef.current.shift();
-
-        // Each operation receives the latest pages in view from the ref
-        const currentPagesInView = await operation(latestPagesInViewRef.current);
-        // Update react state
-        setPagesInView(currentPagesInView);
-        // Update our latest pages in view ref immediately
-        latestPagesInViewRef.current = currentPagesInView;
-      }
-    } finally {
-      isProcessingRef.current = false;
-    }
-  }, []);
-
-  // Add operation to queue
-  const enqueOperation = useCallback(
-    (operation: QueueOperation) => {
-      operationQueueRef.current.push(operation);
-      processQueue();
-    },
-    [processQueue]
-  );
+  const { pagesInView, enqueueOperation, loadNextPage, loadPreviousPage } = useVirtualisedList();
 
   // Apply scale to page height (zoomed in or zoomed out)
   pageHeight = pageHeight * scale;
 
+  const effectivePageHeight = calculateEffectivePageHeight(pageHeight, pageSpacing);
+
   // Calculate pdf container height based on page height and number of pages
-  const pdfContainerHeight = numPages * pageHeight + (numPages + 1) * pageSpacing;
+  const pdfContainerHeight = calculatePdfContainerHeight(numPages, pageHeight, pageSpacing);
 
   // Update scroll position on new scale
   useEffect(() => {
@@ -110,8 +44,6 @@ const VirtualisedList = ({
       }
     }
   }, [scale, numPages, pageHeight, pageSpacing]);
-
-  const effectivePageHeight = pageHeight + pageSpacing;
 
   // Update current page index on scroll
   const handleScroll = () => {
@@ -129,7 +61,7 @@ const VirtualisedList = ({
   // Load initial 5 or less pages
   useEffect(() => {
     if (!pdfDoc) return;
-    enqueOperation(async (currentPagesInView) => {
+    enqueueOperation(async (currentPagesInView) => {
       const pagesInView = [...currentPagesInView];
       for (let i = 1; i <= Math.min(numPages, 5); i++) {
         const pageImgUrl = await renderPage(pdfDoc, i);
@@ -140,7 +72,7 @@ const VirtualisedList = ({
       }
       return pagesInView;
     });
-  }, [numPages, pdfDoc, enqueOperation, renderPage]);
+  }, [numPages, pdfDoc, enqueueOperation, renderPage]);
 
   // Update pagesInView when scrolling
   useEffect(() => {
@@ -148,41 +80,24 @@ const VirtualisedList = ({
 
     // If scrolling down
     if (currentPage > previousPageRef.current) {
-      enqueOperation(async (currentPagesInView) => {
-        const midPointPagesInView = Math.floor(currentPagesInView.length / 2);
-        // If user is past mid point of currentPagesInView batch and batch did not reach the EOF
-        if (
-          currentPage > currentPagesInView[midPointPagesInView].page &&
-          currentPagesInView[currentPagesInView.length - 1].page !== numPages
-        ) {
-          const updatedPagesInView = await appendPagesInView(1, pdfDoc, currentPagesInView);
-          updatedPagesInView.shift();
-          return updatedPagesInView;
-        }
-        // Return unchanged current pages if no change needed
-        return currentPagesInView;
+      enqueueOperation(async (currentPagesInView) => {
+        return await loadNextPage(
+          pdfDoc,
+          currentPagesInView,
+          currentPage,
+          numPages,
+          appendPagesInView
+        );
       });
     }
 
     // If scrolling up
     if (currentPage < previousPageRef.current) {
-      enqueOperation(async (currentPagesInView) => {
-        const midPointPagesInView = Math.floor(currentPagesInView.length / 2);
-        //  if user is behind mid point of pagesInView batch and batch did not reach the BOF
-        if (
-          currentPage < currentPagesInView[midPointPagesInView].page &&
-          currentPagesInView[0].page !== 1
-        ) {
-          const updatedPagesInView = await prependPagesInView(1, pdfDoc, currentPagesInView);
-          updatedPagesInView.pop();
-          // Return updated current pages for next operation in the queue
-          return updatedPagesInView;
-        }
-        // Return unchanged current pages if no change needed
-        return currentPagesInView;
+      enqueueOperation(async (currentPagesInView) => {
+        return await loadPreviousPage(pdfDoc, currentPagesInView, currentPage, prependPagesInView);
       });
     }
-  }, [currentPage, numPages, pdfDoc, enqueOperation, appendPagesInView, prependPagesInView]);
+  }, [currentPage, numPages, pdfDoc, enqueueOperation, appendPagesInView, prependPagesInView]);
 
   return (
     <div
