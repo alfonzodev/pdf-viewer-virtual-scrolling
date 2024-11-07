@@ -22,7 +22,7 @@ const FileSelect = ({ setFile }: PdfProps) => {
     <div>
       <button
         onClick={openFileExplorer}
-        className="px-8 py-2 bg-gray-800 text-white font-medium rounded-lg shadow-md hover:bg-gray-700 hover:text-gray-300 transform transition-transform duration-300 ease-in-out focus:outline-none focus:ring-1 focus:ring-gray-500"
+        className="px-8 py-2 bg-gray-800 text-white font-medium rounded-lg shadow-md hover:bg-gray-700 hover:text-gray-300 transform transition-transform duration-300 ease-in-out focus:outline-none focus:ring-1 focus:ring-gray-500 select-none"
       >
         Select Pdf File
       </button>
