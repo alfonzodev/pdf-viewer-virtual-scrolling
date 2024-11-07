@@ -26,12 +26,12 @@ const VirtualisedList = ({
   const { pagesInView, enqueueOperation, loadNextPage, loadPreviousPage } = useVirtualisedList();
 
   // Apply scale to page height (zoomed in or zoomed out)
-  pageHeight = pageHeight * scale;
+  const scaledPageHeight = pageHeight * scale;
 
-  const effectivePageHeight = calculateEffectivePageHeight(pageHeight, pageSpacing);
+  const effectivePageHeight = calculateEffectivePageHeight(scaledPageHeight, pageSpacing);
 
   // Calculate pdf container height based on page height and number of pages
-  const pdfContainerHeight = calculatePdfContainerHeight(numPages, pageHeight, pageSpacing);
+  const pdfContainerHeight = calculatePdfContainerHeight(numPages, scaledPageHeight, pageSpacing);
 
   // Update scroll position on new scale
   useEffect(() => {
@@ -40,10 +40,11 @@ const VirtualisedList = ({
 
       if (currentScrollPosition !== 0) {
         const newScrollPosition = (scale * currentScrollPosition) / previousScaleRef.current;
+        previousScaleRef.current = scale;
         viewportRef.current.scrollTop = newScrollPosition;
       }
     }
-  }, [scale, numPages, pageHeight, pageSpacing]);
+  }, [scale, numPages, scaledPageHeight, pageSpacing]);
 
   // Update current page index on scroll
   const handleScroll = () => {
@@ -110,20 +111,20 @@ const VirtualisedList = ({
       <div
         style={{
           height: `${pdfContainerHeight}px`,
-          width: `${pageHeight / RATIO_ISO_216_PAPER_SIZE}px`,
+          width: `${scaledPageHeight / RATIO_ISO_216_PAPER_SIZE}px`,
         }}
         className="relative mx-auto"
       >
         {pagesInView.length > 0 &&
           pagesInView.map(({ page, url }) => {
-            const top = (page - 1) * pageHeight + pageSpacing * page;
+            const top = (page - 1) * scaledPageHeight + pageSpacing * page;
 
             return (
               <div
                 key={`page-${page}`}
                 style={{
-                  height: `${pageHeight}px`,
-                  width: `${pageHeight / RATIO_ISO_216_PAPER_SIZE}px`,
+                  height: `${scaledPageHeight}px`,
+                  width: `${scaledPageHeight / RATIO_ISO_216_PAPER_SIZE}px`,
                   top: `${top}px`,
                 }}
                 className="absolute shadow-md border border-gray-50 p-2 flex justify-center items-center bg-white"
