@@ -7,6 +7,7 @@ import {
   getBreakPoint,
   RATIO_ISO_216_PAPER_SIZE,
   PDF_VIEWER_WIDTH,
+  debounce,
 } from "../utils";
 
 const VirtualisedList = ({
@@ -33,15 +34,15 @@ const VirtualisedList = ({
 
   // Event listener for window resize
   useEffect(() => {
-    const handleResize = () => {
+    const debouncedHandleResize = debounce(() => {
       // update breakpoint based on window width
       const newBreakpoint = getBreakPoint(window.innerWidth);
       setScreenBreakPoint(newBreakpoint);
-    };
+    }, 150);
 
-    window.addEventListener("resize", handleResize);
+    window.addEventListener("resize", debouncedHandleResize);
 
-    return () => window.removeEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", debouncedHandleResize);
   }, []);
 
   // Apply scale to page height (zoomed in or zoomed out)

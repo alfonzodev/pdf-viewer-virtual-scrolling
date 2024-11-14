@@ -29,3 +29,11 @@ export const getBreakPoint = (windowWidth: number) => {
   if (windowWidth >= 320) return "2xs";
   else return "3xs";
 };
+
+export const debounce = (func: () => void, delay: number) => {
+  let timer: ReturnType<typeof setTimeout> | null = null;
+  return () => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(func, delay);
+  };
+};
