@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { VirtualisedListProps } from "../types";
 import useVirtualisedList from "../hooks/useVirtualisedList";
 import {
@@ -32,18 +32,21 @@ const VirtualisedList = ({
 
   const { pagesInView, enqueueOperation, loadNextPage, loadPreviousPage } = useVirtualisedList();
 
-  // Event listener for window resize
-  useEffect(() => {
-    const debouncedHandleResize = debounce(() => {
+  // Memoized debounce function
+  const debouncedHandleResize = useCallback(
+    debounce(() => {
       // update breakpoint based on window width
       const newBreakpoint = getBreakPoint(window.innerWidth);
       setScreenBreakPoint(newBreakpoint);
-    }, 150);
+    }, 150),
+    [getBreakPoint]
+  );
 
+  // Event listener for window resize
+  useEffect(() => {
     window.addEventListener("resize", debouncedHandleResize);
-
     return () => window.removeEventListener("resize", debouncedHandleResize);
-  }, []);
+  }, [debouncedHandleResize]);
 
   // Apply scale to page height (zoomed in or zoomed out)
   const scaledPageHeight = pageHeight * scale;
