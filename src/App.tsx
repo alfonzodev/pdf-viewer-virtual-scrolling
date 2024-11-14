@@ -6,7 +6,7 @@ const App = () => {
   const [file, setFile] = useState<File | null>(null);
 
   return (
-    <div className="w-screen h-screen flex flex-col justify-center items-center gap-y-2">
+    <div className="flex flex-col justify-center items-center gap-y-4 py-16 w-full">
       <PdfViewer file={file} />
       <FileSelect setFile={setFile} />
     </div>

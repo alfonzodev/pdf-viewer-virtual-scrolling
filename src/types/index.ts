@@ -18,8 +18,7 @@ export interface VirtualisedListProps {
   numPages: number;
   pageHeight: number;
   pageSpacing: number;
-  viewportWidth: number;
-  viewportHeight: number;
+  viewerHeight: number;
   pdfDoc: PDFDocumentProxy | null;
   currentPage: number;
   setCurrentPage: (pageIndex: number) => void;

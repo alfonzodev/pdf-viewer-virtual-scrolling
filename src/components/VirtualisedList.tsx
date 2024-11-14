@@ -1,16 +1,19 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { VirtualisedListProps } from "../types";
 import useVirtualisedList from "../hooks/useVirtualisedList";
-import { calculatePdfContainerHeight, calculateEffectivePageHeight } from "../utils";
-
-const RATIO_ISO_216_PAPER_SIZE = Math.sqrt(2);
+import {
+  calculatePdfContainerHeight,
+  calculateEffectivePageHeight,
+  getBreakPoint,
+  RATIO_ISO_216_PAPER_SIZE,
+  PDF_VIEWER_WIDTH,
+} from "../utils";
 
 const VirtualisedList = ({
   numPages,
   pageHeight,
   pageSpacing,
-  viewportWidth,
-  viewportHeight,
+  viewerHeight,
   pdfDoc,
   currentPage,
   setCurrentPage,
@@ -20,10 +23,26 @@ const VirtualisedList = ({
   scale,
 }: VirtualisedListProps) => {
   const viewportRef = useRef<HTMLDivElement>(null);
-  const previousScaleRef = useRef(scale);
-  const previousPageRef = useRef(currentPage);
+  const previousScaleRef = useRef<number>(scale);
+  const previousPageRef = useRef<number>(currentPage);
+  const [screenBreakpoint, setScreenBreakPoint] = useState<keyof typeof PDF_VIEWER_WIDTH>(
+    getBreakPoint(window.innerWidth)
+  );
 
   const { pagesInView, enqueueOperation, loadNextPage, loadPreviousPage } = useVirtualisedList();
+
+  // Event listener for window resize
+  useEffect(() => {
+    const handleResize = () => {
+      // update breakpoint based on window width
+      const newBreakpoint = getBreakPoint(window.innerWidth);
+      setScreenBreakPoint(newBreakpoint);
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   // Apply scale to page height (zoomed in or zoomed out)
   const scaledPageHeight = pageHeight * scale;
@@ -33,7 +52,10 @@ const VirtualisedList = ({
   // Calculate pdf container height based on page height and number of pages
   const pdfContainerHeight = calculatePdfContainerHeight(numPages, scaledPageHeight, pageSpacing);
 
-  // Update scroll position on new scale
+  // Update scroll position on resize of viewport
+  useEffect(() => {}, []);
+
+  // Update scroll position on new scale of pdf
   useEffect(() => {
     if (viewportRef.current) {
       const currentScrollPosition = viewportRef.current.scrollTop;
@@ -102,7 +124,10 @@ const VirtualisedList = ({
 
   return (
     <div
-      style={{ width: `${viewportWidth}px`, height: `${viewportHeight}px` }}
+      style={{
+        width: `${PDF_VIEWER_WIDTH[screenBreakpoint]}px`,
+        height: `${viewerHeight}px`,
+      }}
       className="overflow-scroll relative bg-[#f5f5f5] px-8"
       ref={viewportRef}
       onScroll={handleScroll}
