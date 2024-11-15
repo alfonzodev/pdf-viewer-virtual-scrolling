@@ -16,7 +16,6 @@ export type prependPagesInView = (
 
 export interface VirtualisedListProps {
   numPages: number;
-  pageHeight: number;
   pageSpacing: number;
   viewerHeight: number;
   pdfDoc: PDFDocumentProxy | null;

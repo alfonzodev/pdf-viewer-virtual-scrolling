@@ -30,7 +30,6 @@ const PdfViewer = ({ file }: { file: File | null }) => {
         pdfDoc={pdfDoc}
         viewerHeight={500}
         numPages={numPages}
-        pageHeight={600}
         pageSpacing={15}
         prependPagesInView={prependPagesInView}
         appendPagesInView={appendPagesInView}
