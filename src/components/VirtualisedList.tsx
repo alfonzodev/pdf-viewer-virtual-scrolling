@@ -57,7 +57,12 @@ const VirtualisedList = ({
   const pdfContainerHeight = calculatePdfContainerHeight(numPages, pageHeight, pageSpacing);
 
   // Update scroll position on resize of viewport
-  useEffect(() => {}, []);
+  useEffect(() => {
+    if (viewportRef.current) {
+      const newScrollPosition = (currentPage - 1) * effectivePageHeight;
+      viewportRef.current.scrollTop = newScrollPosition;
+    }
+  }, [screenBreakpoint, effectivePageHeight, currentPage]);
 
   // Update scroll position on new scale of pdf
   useEffect(() => {
