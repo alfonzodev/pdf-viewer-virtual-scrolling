@@ -62,7 +62,7 @@ const VirtualisedList = ({
       const newScrollPosition = (currentPage - 1) * effectivePageHeight;
       viewportRef.current.scrollTop = newScrollPosition;
     }
-  }, [screenBreakpoint, effectivePageHeight, currentPage]);
+  }, [screenBreakpoint]);
 
   // Update scroll position on new scale of pdf
   useEffect(() => {
