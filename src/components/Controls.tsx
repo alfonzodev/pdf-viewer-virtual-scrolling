@@ -1,37 +1,7 @@
 import { ChevronDown, ChevronUp, ZoomOut, ZoomIn } from "lucide-react";
-import { PDFDocumentProxy } from "pdfjs-dist";
+import { ControlsProps } from "../types";
 
-interface ControlsProps {
-  currentPage: number;
-  setScale: React.Dispatch<React.SetStateAction<number>>;
-  numPages: number;
-  pdfDoc: PDFDocumentProxy | null;
-}
-
-const MIN_SCALE = 0.25;
-const MAX_SCALE = 2;
-
-const Controls = ({ setScale, currentPage, numPages, pdfDoc }: ControlsProps) => {
-  const handleZoomOut = () => {
-    if (!pdfDoc) return;
-    setScale((prevScale) => {
-      if (prevScale === MIN_SCALE) {
-        return prevScale;
-      }
-      return prevScale - 0.25;
-    });
-  };
-
-  const handleZoomIn = () => {
-    if (!pdfDoc) return;
-    setScale((prevScale) => {
-      if (prevScale === MAX_SCALE) {
-        return prevScale;
-      }
-      return prevScale + 0.25;
-    });
-  };
-
+const Controls = ({ currentPage, numPages, pdfDoc, zoomOut, zoomIn }: ControlsProps) => {
   return (
     <div className="w-full h-10 bg-[#fefefe] flex text-gray-700">
       <div className="flex items-center justify-center gap-x-3 flex-1 h-full e">
@@ -51,11 +21,11 @@ const Controls = ({ setScale, currentPage, numPages, pdfDoc }: ControlsProps) =>
       <div className="flex items-center justify-center gap-x-3 flex-1 h-full e">
         <ZoomOut
           className="cursor-pointer hover:scale-110 hover:text-black"
-          onClick={handleZoomOut}
+          onClick={() => pdfDoc && zoomOut()}
         />
         <ZoomIn
           className="cursor-pointer hover:scale-110 hover:text-black"
-          onClick={handleZoomIn}
+          onClick={() => pdfDoc && zoomIn()}
         />
       </div>
     </div>

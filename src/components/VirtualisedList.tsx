@@ -21,15 +21,25 @@ const VirtualisedList = ({
   appendPagesInView,
   prependPagesInView,
   scale,
+  zoomOut,
+  zoomIn,
 }: VirtualisedListProps) => {
-  const viewportRef = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<HTMLDivElement>(null);
   const previousScaleRef = useRef<number>(scale);
   const previousPageRef = useRef<number>(currentPage);
   const [screenBreakpoint, setScreenBreakPoint] = useState<keyof typeof PDF_VIEWER_WIDTH>(
     getBreakPoint(window.innerWidth)
   );
 
+  // distance between two points (zoom in mobile devices)
+  const [lastDistance, setLastDistance] = useState<number | null>(null);
+
   const { pagesInView, enqueueOperation, loadNextPage, loadPreviousPage } = useVirtualisedList();
+
+  const pageWidth = Math.min(PDF_VIEWER_WIDTH[screenBreakpoint] - 20, 500) * scale;
+  const pageHeight = pageWidth * RATIO_ISO_216_PAPER_SIZE;
+  const effectivePageHeight = calculateEffectivePageHeight(pageHeight, pageSpacing);
+  const pdfContainerHeight = calculatePdfContainerHeight(numPages, pageHeight, pageSpacing);
 
   // Memoized debounced resize handler function
   const debouncedHandleResize = useCallback(
@@ -47,40 +57,51 @@ const VirtualisedList = ({
     return () => window.removeEventListener("resize", debouncedHandleResize);
   }, [debouncedHandleResize]);
 
-  const pageWidth = Math.min(PDF_VIEWER_WIDTH[screenBreakpoint] - 20, 500) * scale;
-
-  const pageHeight = pageWidth * RATIO_ISO_216_PAPER_SIZE;
-
-  const effectivePageHeight = calculateEffectivePageHeight(pageHeight, pageSpacing);
-
-  // Calculate pdf container height based on page height and number of pages
-  const pdfContainerHeight = calculatePdfContainerHeight(numPages, pageHeight, pageSpacing);
-
   // Update scroll position on resize of viewport
   useEffect(() => {
-    if (viewportRef.current) {
+    if (viewerRef.current) {
       const newScrollPosition = (currentPage - 1) * effectivePageHeight;
-      viewportRef.current.scrollTop = newScrollPosition;
+      viewerRef.current.scrollTop = newScrollPosition;
     }
   }, [screenBreakpoint]);
 
+  // Mobile Zoom
+  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
+    if (!pdfDoc) return;
+    if (e.touches.length === 2) {
+      const [touch1, touch2] = Array.from(e.touches);
+      const distance = Math.hypot(touch2.pageX - touch1.pageX, touch2.pageY - touch1.pageY);
+
+      if (lastDistance) {
+        const scaleChange = distance / lastDistance;
+        // handle zoom in or out depending on scale change
+        if (scaleChange > 1) {
+          zoomIn();
+        } else if (scaleChange < 1) {
+          zoomOut();
+        }
+      }
+      setLastDistance(distance);
+    }
+  };
+
   // Update scroll position on new scale of pdf
   useEffect(() => {
-    if (viewportRef.current) {
-      const currentScrollPosition = viewportRef.current.scrollTop;
+    if (viewerRef.current) {
+      const currentScrollPosition = viewerRef.current.scrollTop;
 
       if (currentScrollPosition !== 0) {
         const newScrollPosition = (scale * currentScrollPosition) / previousScaleRef.current;
         previousScaleRef.current = scale;
-        viewportRef.current.scrollTop = newScrollPosition;
+        viewerRef.current.scrollTop = newScrollPosition;
       }
     }
   }, [scale, numPages, pageSpacing]);
 
   // Update current page index on scroll
   const handleScroll = () => {
-    if (viewportRef.current) {
-      const { scrollTop } = viewportRef.current;
+    if (viewerRef.current) {
+      const { scrollTop } = viewerRef.current;
       const pageCalc = (scrollTop + 1) / effectivePageHeight;
       const newPage = Math.ceil(pageCalc);
       if (newPage !== currentPage) {
@@ -137,11 +158,12 @@ const VirtualisedList = ({
         width: `${PDF_VIEWER_WIDTH[screenBreakpoint]}px`,
         height: `${viewerHeight}px`,
       }}
+      onTouchMove={handleTouchMove}
       className="overflow-scroll relative bg-[#f5f5f5] px-2 sm:px-4 lg:px-8 "
-      ref={viewportRef}
+      ref={viewerRef}
       onScroll={handleScroll}
     >
-      {/* Pdf Container */}
+      {/* Pdf Document Container */}
       <div
         style={{
           height: `${pdfContainerHeight}px`,

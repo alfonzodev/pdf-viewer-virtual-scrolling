@@ -3,13 +3,14 @@ import { useEffect, useState } from "react";
 import usePdf from "../hooks/usePdf";
 import VirtualisedList from "./VirtualisedList";
 import Controls from "./Controls";
+import useScale from "../hooks/useScale";
 
 const PdfViewer = ({ file }: { file: File | null }) => {
   const { loadPdfDoc, pdfDoc, numPages, renderPage, prependPagesInView, appendPagesInView } =
     usePdf();
+  const { scale, zoomOut, zoomIn } = useScale();
 
   const [currentPage, setCurrentPage] = useState<number>(1);
-  const [scale, setScale] = useState<number>(1);
 
   useEffect(() => {
     if (file) {
@@ -27,6 +28,8 @@ const PdfViewer = ({ file }: { file: File | null }) => {
         setCurrentPage={setCurrentPage}
         renderPage={renderPage}
         scale={scale}
+        zoomOut={zoomOut}
+        zoomIn={zoomIn}
         pdfDoc={pdfDoc}
         viewerHeight={500}
         numPages={numPages}
@@ -34,7 +37,13 @@ const PdfViewer = ({ file }: { file: File | null }) => {
         prependPagesInView={prependPagesInView}
         appendPagesInView={appendPagesInView}
       />
-      <Controls setScale={setScale} currentPage={currentPage} numPages={numPages} pdfDoc={pdfDoc} />
+      <Controls
+        currentPage={currentPage}
+        numPages={numPages}
+        pdfDoc={pdfDoc}
+        zoomOut={zoomOut}
+        zoomIn={zoomIn}
+      />
     </div>
   );
 };

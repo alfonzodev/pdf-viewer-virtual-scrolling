@@ -25,6 +25,16 @@ export interface VirtualisedListProps {
   appendPagesInView: appendPagesInView;
   prependPagesInView: prependPagesInView;
   scale: number;
+  zoomOut: () => void;
+  zoomIn: () => void;
+}
+
+export interface ControlsProps {
+  zoomOut: () => void;
+  zoomIn: () => void;
+  currentPage: number;
+  numPages: number;
+  pdfDoc: PDFDocumentProxy | null;
 }
 
 export type QueueOperation = (currentPagesInView: pageInView[]) => Promise<pageInView[]>;
