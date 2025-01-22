@@ -54,7 +54,7 @@ const useScale = () => {
     }
   };
 
-  return { scale, zoomOut, zoomIn, handleTouchMove };
+  return { scale, setScale, zoomOut, zoomIn, handleTouchMove };
 };
 
 export default useScale;
