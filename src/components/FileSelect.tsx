@@ -1,10 +1,11 @@
+import { Upload } from "lucide-react";
 import { useRef } from "react";
 
-interface PdfProps {
-  setFile: (file: File) => void;
-}
+type FileSelectProps = {
+  setFile: React.Dispatch<React.SetStateAction<File | null>>;
+};
 
-const FileSelect = ({ setFile }: PdfProps) => {
+const FileSelect = ({ setFile }: FileSelectProps) => {
   const inputFileRef = useRef<HTMLInputElement>(null);
   const openFileExplorer = () => {
     inputFileRef.current?.click();
@@ -19,12 +20,13 @@ const FileSelect = ({ setFile }: PdfProps) => {
   };
 
   return (
-    <div>
+    <>
       <button
         onClick={openFileExplorer}
-        className="px-8 py-2 bg-gray-800 text-white font-medium rounded-lg shadow-md hover:bg-gray-700 hover:text-gray-300 transform transition-transform duration-300 ease-in-out focus:outline-none focus:ring-1 focus:ring-gray-500 select-none"
+        className="px-14 flex items-center justify-center gap-2 py-3 mx-auto mt-4 bg-slate-900 text-white font-medium rounded-full shadow-lg shadow-gray-800 hover:-translate-y-1 hover:text-orange-400 transform transition-transform duration-300 ease-in-out focus:outline-none focus:ring-1 focus:ring-gray-500 select-none"
       >
-        Select Pdf File
+        <Upload size={20} strokeWidth={1} />
+        <span className="leading-none font-light">Select Pdf File</span>
       </button>
       <input
         ref={inputFileRef}
@@ -34,7 +36,7 @@ const FileSelect = ({ setFile }: PdfProps) => {
         onChange={handleFileSelect}
         className="hidden"
       />
-    </div>
+    </>
   );
 };
 

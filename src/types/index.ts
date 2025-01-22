@@ -14,19 +14,6 @@ export type prependPagesInView = (
   pagesInView: pageInView[]
 ) => Promise<pageInView[]>;
 
-export interface VirtualisedListProps {
-  numPages: number;
-  pageHeight: number;
-  pageSpacing: number;
-  viewportWidth: number;
-  viewportHeight: number;
-  pdfDoc: PDFDocumentProxy | null;
-  currentPage: number;
-  setCurrentPage: (pageIndex: number) => void;
-  renderPage: (pdf: PDFDocumentProxy, pageNum: number) => Promise<string>;
-  appendPagesInView: appendPagesInView;
-  prependPagesInView: prependPagesInView;
-  scale: number;
-}
-
-export type QueueOperation = (currentPagesInView: pageInView[]) => Promise<pageInView[]>;
+export type QueueOperation = (
+  currentPagesInView: pageInView[]
+) => Promise<pageInView[]>;

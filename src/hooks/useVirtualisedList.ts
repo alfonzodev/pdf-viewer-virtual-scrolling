@@ -66,10 +66,7 @@ const useVirtualisedList = () => {
   ) => {
     const midPointPagesInView = Math.floor(currentPagesInView.length / 2);
     //  if user is behind mid point of pagesInView batch and batch did not reach the BOF
-    if (
-      currentPage < currentPagesInView[midPointPagesInView].page &&
-      currentPagesInView[0].page !== 1
-    ) {
+    if (currentPage < currentPagesInView[midPointPagesInView].page && currentPagesInView[0].page !== 1) {
       const updatedPagesInView = await prependPagesInView(1, pdfDoc, currentPagesInView);
       updatedPagesInView.pop();
       // Return updated current pages for next operation in the queue
