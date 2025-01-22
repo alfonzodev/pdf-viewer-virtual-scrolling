@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { VirtualisedListProps } from "../types";
+import { appendPagesInView, prependPagesInView } from "../types";
 import useVirtualisedList from "../hooks/useVirtualisedList";
 import {
   calculatePdfContainerHeight,
@@ -8,7 +8,29 @@ import {
   RATIO_ISO_216_PAPER_SIZE,
   PDF_VIEWER_WIDTH,
   debounce,
+  currentPageCalc,
 } from "../utils";
+import Controls from "./Controls";
+import { PDFDocumentProxy } from "pdfjs-dist";
+
+type VirtualisedListProps = {
+  numPages: number;
+  pageSpacing: number;
+  viewerHeight: number;
+  pdfDoc: PDFDocumentProxy | null;
+  currentPage: number;
+  setCurrentPage: React.Dispatch<React.SetStateAction<number>>;
+  renderPage: (pdf: PDFDocumentProxy, pageNum: number) => Promise<string>;
+  appendPagesInView: appendPagesInView;
+  prependPagesInView: prependPagesInView;
+  scale: number;
+  handleTouchMove: (
+    e: React.TouchEvent<HTMLDivElement>,
+    pdfDoc: PDFDocumentProxy | null
+  ) => void;
+  zoomOut: () => void;
+  zoomIn: () => void;
+};
 
 const VirtualisedList = ({
   numPages,
@@ -21,25 +43,32 @@ const VirtualisedList = ({
   appendPagesInView,
   prependPagesInView,
   scale,
+  handleTouchMove,
   zoomOut,
   zoomIn,
 }: VirtualisedListProps) => {
   const viewerRef = useRef<HTMLDivElement>(null);
   const previousScaleRef = useRef<number>(scale);
   const previousPageRef = useRef<number>(currentPage);
-  const [screenBreakpoint, setScreenBreakPoint] = useState<keyof typeof PDF_VIEWER_WIDTH>(
-    getBreakPoint(window.innerWidth)
-  );
+  const [screenBreakpoint, setScreenBreakPoint] = useState<
+    keyof typeof PDF_VIEWER_WIDTH
+  >(getBreakPoint(window.innerWidth));
 
-  // distance between two points (zoom in mobile devices)
-  const [lastDistance, setLastDistance] = useState<number | null>(null);
+  const { pagesInView, enqueueOperation, loadNextPage, loadPreviousPage } =
+    useVirtualisedList();
 
-  const { pagesInView, enqueueOperation, loadNextPage, loadPreviousPage } = useVirtualisedList();
-
-  const pageWidth = Math.min(PDF_VIEWER_WIDTH[screenBreakpoint] - 20, 500) * scale;
+  const pageWidth =
+    Math.min(PDF_VIEWER_WIDTH[screenBreakpoint] - 20, 500) * scale;
   const pageHeight = pageWidth * RATIO_ISO_216_PAPER_SIZE;
-  const effectivePageHeight = calculateEffectivePageHeight(pageHeight, pageSpacing);
-  const pdfContainerHeight = calculatePdfContainerHeight(numPages, pageHeight, pageSpacing);
+  const effectivePageHeight = calculateEffectivePageHeight(
+    pageHeight,
+    pageSpacing
+  );
+  const pdfContainerHeight = calculatePdfContainerHeight(
+    numPages,
+    pageHeight,
+    pageSpacing
+  );
 
   // Memoized debounced resize handler function
   const debouncedHandleResize = useCallback(
@@ -65,45 +94,46 @@ const VirtualisedList = ({
     }
   }, [screenBreakpoint]);
 
-  // Mobile Zoom
-  const handleTouchMove = (e: React.TouchEvent<HTMLDivElement>) => {
-    if (!pdfDoc) return;
-    if (e.touches.length === 2) {
-      const [touch1, touch2] = Array.from(e.touches);
-      const distance = Math.hypot(touch2.pageX - touch1.pageX, touch2.pageY - touch1.pageY);
-
-      if (lastDistance) {
-        const scaleChange = distance / lastDistance;
-        // handle zoom in or out depending on scale change
-        if (scaleChange > 1) {
-          zoomIn();
-        } else if (scaleChange < 1) {
-          zoomOut();
-        }
-      }
-      setLastDistance(distance);
-    }
-  };
-
   // Update scroll position on new scale of pdf
   useEffect(() => {
     if (viewerRef.current) {
       const currentScrollPosition = viewerRef.current.scrollTop;
 
       if (currentScrollPosition !== 0) {
-        const newScrollPosition = (scale * currentScrollPosition) / previousScaleRef.current;
+        const newScrollPosition =
+          (scale * currentScrollPosition) / previousScaleRef.current;
         previousScaleRef.current = scale;
         viewerRef.current.scrollTop = newScrollPosition;
       }
     }
   }, [scale, numPages, pageSpacing]);
 
+  // Update scroll position on page down
+  const handlePageDown = () => {
+    if (viewerRef.current) {
+      const newCurrentPage = currentPage > 1 ? currentPage - 1 : currentPage;
+      const newScrollPosition = (newCurrentPage - 1) * effectivePageHeight;
+      viewerRef.current.scrollTop = newScrollPosition;
+    }
+  };
+
+  // Update scroll position on page up
+  const handlePageUp = () => {
+    if (viewerRef.current) {
+      const newCurrentPage =
+        currentPage < numPages ? currentPage + 1 : currentPage;
+      const newScrollPosition = (newCurrentPage - 1) * effectivePageHeight;
+      viewerRef.current.scrollTop = newScrollPosition;
+    }
+  };
+
   // Update current page index on scroll
   const handleScroll = () => {
     if (viewerRef.current) {
       const { scrollTop } = viewerRef.current;
-      const pageCalc = (scrollTop + 1) / effectivePageHeight;
-      const newPage = Math.ceil(pageCalc);
+      const newPage = Math.ceil(
+        currentPageCalc(scrollTop, effectivePageHeight)
+      );
       if (newPage !== currentPage) {
         previousPageRef.current = currentPage;
         setCurrentPage(newPage);
@@ -147,54 +177,77 @@ const VirtualisedList = ({
     // If scrolling up
     if (currentPage < previousPageRef.current) {
       enqueueOperation(async (currentPagesInView) => {
-        return await loadPreviousPage(pdfDoc, currentPagesInView, currentPage, prependPagesInView);
+        return await loadPreviousPage(
+          pdfDoc,
+          currentPagesInView,
+          currentPage,
+          prependPagesInView
+        );
       });
     }
-  }, [currentPage, numPages, pdfDoc, enqueueOperation, appendPagesInView, prependPagesInView]);
+  }, [
+    currentPage,
+    numPages,
+    pdfDoc,
+    enqueueOperation,
+    appendPagesInView,
+    prependPagesInView,
+  ]);
 
   return (
-    <div
-      style={{
-        width: `${PDF_VIEWER_WIDTH[screenBreakpoint]}px`,
-        height: `${viewerHeight}px`,
-      }}
-      onTouchMove={handleTouchMove}
-      className="overflow-scroll relative bg-[#f5f5f5] px-2 sm:px-4 lg:px-8 "
-      ref={viewerRef}
-      onScroll={handleScroll}
-    >
-      {/* Pdf Document Container */}
+    <>
       <div
         style={{
-          height: `${pdfContainerHeight}px`,
-          width: `${pageWidth}px`,
+          width: `${PDF_VIEWER_WIDTH[screenBreakpoint]}px`,
+          height: `${viewerHeight}px`,
         }}
-        className="relative mx-auto"
+        onTouchMove={(e) => handleTouchMove(e, pdfDoc)}
+        className="overflow-scroll relative bg-[#f5f5f5] px-2 sm:px-4 lg:px-8 "
+        ref={viewerRef}
+        onScroll={handleScroll}
       >
-        {pagesInView.length > 0 &&
-          pagesInView.map(({ page, url }) => {
-            const top = (page - 1) * pageHeight + pageSpacing * page;
+        {/* Pdf Document Container */}
+        <div
+          style={{
+            height: `${pdfContainerHeight}px`,
+            width: `${pageWidth}px`,
+          }}
+          className="relative mx-auto"
+        >
+          {pagesInView.length > 0 &&
+            pagesInView.map(({ page, url }) => {
+              const top = (page - 1) * pageHeight + pageSpacing * page;
 
-            return (
-              <div
-                key={`page-${page}`}
-                style={{
-                  height: `${pageHeight}px`,
-                  width: `${pageWidth}px`,
-                  top: `${top}px`,
-                }}
-                className="absolute shadow-md border border-gray-50 p-2 flex justify-center items-center bg-white"
-              >
-                <img
-                  alt={`page ${page} of the x doc`}
-                  src={url}
-                  className="w-auto h-auto max-h-full max-w-full"
-                />
-              </div>
-            );
-          })}
+              return (
+                <div
+                  key={`page-${page}`}
+                  style={{
+                    height: `${pageHeight}px`,
+                    width: `${pageWidth}px`,
+                    top: `${top}px`,
+                  }}
+                  className="absolute shadow-md border border-gray-50 p-2 flex justify-center items-center bg-white"
+                >
+                  <img
+                    alt={`page ${page} of the x doc`}
+                    src={url}
+                    className="w-auto h-auto max-h-full max-w-full"
+                  />
+                </div>
+              );
+            })}
+        </div>
       </div>
-    </div>
+      <Controls
+        currentPage={currentPage}
+        numPages={numPages}
+        pdfDoc={pdfDoc}
+        zoomOut={zoomOut}
+        zoomIn={zoomIn}
+        handlePageDown={handlePageDown}
+        handlePageUp={handlePageUp}
+      />
+    </>
   );
 };
 

@@ -4,8 +4,10 @@ export const calculatePdfContainerHeight = (
   pageSpacing: number
 ) => numPages * pageHeight + (numPages + 1) * pageSpacing;
 
-export const calculateEffectivePageHeight = (pageHeight: number, pageSpacing: number) =>
-  pageHeight + pageSpacing;
+export const calculateEffectivePageHeight = (
+  pageHeight: number,
+  pageSpacing: number
+) => pageHeight + pageSpacing;
 
 export const RATIO_ISO_216_PAPER_SIZE = Math.sqrt(2);
 
@@ -36,4 +38,11 @@ export const debounce = (func: () => void, delay: number) => {
     if (timer) clearTimeout(timer);
     timer = setTimeout(func, delay);
   };
+};
+
+export const currentPageCalc = (
+  scrollTop: number,
+  effectivePageHeight: number
+) => {
+  return (scrollTop + 1) / effectivePageHeight;
 };

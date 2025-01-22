@@ -6,9 +6,15 @@ import Controls from "./Controls";
 import useScale from "../hooks/useScale";
 
 const PdfViewer = ({ file }: { file: File | null }) => {
-  const { loadPdfDoc, pdfDoc, numPages, renderPage, prependPagesInView, appendPagesInView } =
-    usePdf();
-  const { scale, zoomOut, zoomIn } = useScale();
+  const {
+    loadPdfDoc,
+    pdfDoc,
+    numPages,
+    renderPage,
+    prependPagesInView,
+    appendPagesInView,
+  } = usePdf();
+  const { scale, zoomOut, zoomIn, handleTouchMove } = useScale();
 
   const [currentPage, setCurrentPage] = useState<number>(1);
 
@@ -28,21 +34,15 @@ const PdfViewer = ({ file }: { file: File | null }) => {
         setCurrentPage={setCurrentPage}
         renderPage={renderPage}
         scale={scale}
-        zoomOut={zoomOut}
-        zoomIn={zoomIn}
+        handleTouchMove={handleTouchMove}
         pdfDoc={pdfDoc}
         viewerHeight={500}
         numPages={numPages}
         pageSpacing={15}
         prependPagesInView={prependPagesInView}
         appendPagesInView={appendPagesInView}
-      />
-      <Controls
-        currentPage={currentPage}
-        numPages={numPages}
-        pdfDoc={pdfDoc}
-        zoomOut={zoomOut}
         zoomIn={zoomIn}
+        zoomOut={zoomOut}
       />
     </div>
   );

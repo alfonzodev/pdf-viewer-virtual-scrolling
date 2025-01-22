@@ -1,12 +1,42 @@
 import { ChevronDown, ChevronUp, ZoomOut, ZoomIn } from "lucide-react";
-import { ControlsProps } from "../types";
+import { PDFDocumentProxy } from "pdfjs-dist";
 
-const Controls = ({ currentPage, numPages, pdfDoc, zoomOut, zoomIn }: ControlsProps) => {
+type ControlsProps = {
+  zoomOut: () => void;
+  zoomIn: () => void;
+  currentPage: number;
+  numPages: number;
+  pdfDoc: PDFDocumentProxy | null;
+  handlePageDown: () => void;
+  handlePageUp: () => void;
+};
+
+const Controls = ({
+  currentPage,
+  numPages,
+  pdfDoc,
+  zoomOut,
+  zoomIn,
+  handlePageDown,
+  handlePageUp,
+}: ControlsProps) => {
   return (
     <div className="w-full h-10 bg-[#fefefe] flex text-gray-700">
       <div className="flex items-center justify-center gap-x-3 flex-1 h-full e">
-        <ChevronDown className="cursor-pointer hover:scale-110 hover:text-black" />
-        <ChevronUp className="cursor-pointer hover:scale-110 hover:text-black" />
+        <button
+          className="cursor-pointer hover:scale-110 hover:text-black "
+          onClick={() => handlePageUp()}
+          disabled={!pdfDoc}
+        >
+          <ChevronDown />
+        </button>
+        <button
+          className="cursor-pointer hover:scale-110 hover:text-black "
+          onClick={() => handlePageDown()}
+          disabled={!pdfDoc}
+        >
+          <ChevronUp />
+        </button>
       </div>
       <div className="flex items-center justify-center gap-x-3 flex-1 h-full text-black select-none">
         <input

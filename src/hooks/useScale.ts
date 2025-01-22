@@ -1,3 +1,4 @@
+import { PDFDocumentProxy } from "pdfjs-dist";
 import { useState } from "react";
 
 const MIN_SCALE = 0.2;
@@ -6,6 +7,8 @@ const SCALE_INCREMENT = 0.2;
 
 const useScale = () => {
   const [scale, setScale] = useState<number>(1);
+  // distance between two points (zoom in mobile devices)
+  const [lastDistance, setLastDistance] = useState<number | null>(null);
 
   const zoomOut = () => {
     setScale((prevScale) => {
@@ -25,7 +28,33 @@ const useScale = () => {
     });
   };
 
-  return { scale, zoomOut, zoomIn };
+  // Mobile Zoom
+  const handleTouchMove = (
+    e: React.TouchEvent<HTMLDivElement>,
+    pdfDoc: PDFDocumentProxy | null
+  ) => {
+    if (!pdfDoc) return;
+    if (e.touches.length === 2) {
+      const [touch1, touch2] = Array.from(e.touches);
+      const distance = Math.hypot(
+        touch2.pageX - touch1.pageX,
+        touch2.pageY - touch1.pageY
+      );
+
+      if (lastDistance) {
+        const scaleChange = distance / lastDistance;
+        // handle zoom in or out depending on scale change
+        if (scaleChange > 1) {
+          zoomIn();
+        } else if (scaleChange < 1) {
+          zoomOut();
+        }
+      }
+      setLastDistance(distance);
+    }
+  };
+
+  return { scale, zoomOut, zoomIn, handleTouchMove };
 };
 
 export default useScale;
