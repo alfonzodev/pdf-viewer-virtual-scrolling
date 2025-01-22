@@ -9,15 +9,15 @@ By limiting the DOM to a maximum of 5 pages at a time, the viewer avoids freezin
 The reason for chosing 5 pages is to create this type of scrolling experience:
 ![an example of virtual scrolling a pdf with 6 pages](https://github.com/alfonzodev/pdf-viewer-virtual-scrolling/blob/main/virtual-scroll-example.png?raw=true)
 
-### To be added
+### To be Done
 
 - Add initial loading screen.
 - Fix race conditions of rendering pdf pages when user scrolls fast. ✅
-- Make preview responsive.
-- Controls:
+- Make preview responsive. ✅
+- Add Controls:
   - Zoom In / Out. ✅
+  - Page Up / Down. ✅
   - Page Number Input.
-  - Page Up / Down.
 
 ### Notes
 
