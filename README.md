@@ -11,13 +11,12 @@ The reason for chosing 5 pages is to create this type of scrolling experience:
 
 ### To be Done
 
-- Add initial loading screen.
 - Fix race conditions of rendering pdf pages when user scrolls fast. ✅
 - Make preview responsive. ✅
 - Add Controls:
   - Zoom In / Out. ✅
   - Page Up / Down. ✅
-  - Page Number Input.
+  - Page Number Input. ✅
 
 ### Notes
 
