@@ -1,13 +1,10 @@
-export const calculatePdfContainerHeight = (
-  numPages: number,
-  pageHeight: number,
-  pageSpacing: number
-) => numPages * pageHeight + (numPages + 1) * pageSpacing;
+import { PDFDocumentProxy } from "pdfjs-dist";
 
-export const calculateEffectivePageHeight = (
-  pageHeight: number,
-  pageSpacing: number
-) => pageHeight + pageSpacing;
+export const calculatePdfContainerHeight = (numPages: number, pageHeight: number, pageSpacing: number) =>
+  numPages * pageHeight + (numPages + 1) * pageSpacing;
+
+export const calculateEffectivePageHeight = (pageHeight: number, pageSpacing: number) =>
+  pageHeight + pageSpacing;
 
 export const RATIO_ISO_216_PAPER_SIZE = Math.sqrt(2);
 
@@ -40,9 +37,40 @@ export const debounce = (func: () => void, delay: number) => {
   };
 };
 
-export const currentPageCalc = (
-  scrollTop: number,
-  effectivePageHeight: number
-) => {
+export const currentPageCalc = (scrollTop: number, effectivePageHeight: number) => {
   return (scrollTop + 1) / effectivePageHeight;
+};
+
+export const renderPage = async (pdf: PDFDocumentProxy, pageNum: number) => {
+  const page = await pdf.getPage(pageNum);
+  const scale = 1.5;
+  const viewport = page.getViewport({ scale });
+  const outputScale = Math.min(window.devicePixelRatio, 2);
+
+  // Create an off-DOM canvas
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+
+  canvas.width = Math.floor(viewport.width * outputScale);
+  canvas.height = Math.floor(viewport.height * outputScale);
+
+  const transform = outputScale !== 1 ? [outputScale, 0, 0, outputScale, 0, 0] : null;
+
+  const renderContext = {
+    canvasContext: context,
+    transform,
+    viewport,
+  };
+
+  //@ts-expect-error the render context is not null. It was assigned above
+  await page.render(renderContext).promise;
+
+  const blob = await new Promise<Blob>((resolve) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+    });
+  });
+
+  const pageImageUrl = URL.createObjectURL(blob);
+  return pageImageUrl;
 };

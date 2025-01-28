@@ -21,9 +21,9 @@ const viewerHeight = 500;
 const PdfViewer = () => {
   const [file, setFile] = useState<File | null>(null);
 
-  const { loadPdfDoc, pdfDoc, numPages, renderPage, prependPagesInView, appendPagesInView } = usePdf();
+  const { loadPdfDoc, pdfDoc, numPages, prependPagesInView, appendPagesInView } = usePdf();
   const { scale, setScale, zoomOut, zoomIn, handleTouchMove } = useScale();
-  const { pagesInView, setPagesInView, enqueueOperation, loadNextPage, loadPreviousPage } =
+  const { pagesInView, setPagesInView, enqueueOperation, loadNextPage, loadPreviousPage, loadPagesBatch } =
     useVirtualisedList();
 
   const [currentPage, setCurrentPage] = useState<number>(1);
@@ -122,18 +122,8 @@ const PdfViewer = () => {
   // Load initial 5 or less pages
   useEffect(() => {
     if (!pdfDoc) return;
-    enqueueOperation(async (currentPagesInView) => {
-      const pagesInView = [...currentPagesInView];
-      for (let i = 1; i <= Math.min(numPages, 5); i++) {
-        const pageImgUrl = await renderPage(pdfDoc, i);
-        pagesInView.push({
-          page: i,
-          url: pageImgUrl,
-        });
-      }
-      return pagesInView;
-    });
-  }, [numPages, pdfDoc, enqueueOperation, renderPage]);
+    loadPagesBatch(pdfDoc, numPages, 1, 5, viewerRef, effectivePageHeight);
+  }, [numPages, pdfDoc]);
 
   // Update pagesInView when scrolling
   useEffect(() => {
@@ -203,12 +193,16 @@ const PdfViewer = () => {
       </div>
       <Controls
         currentPage={currentPage}
+        setCurrentPage={setCurrentPage}
         numPages={numPages}
         pdfDoc={pdfDoc}
         zoomOut={zoomOut}
         zoomIn={zoomIn}
         handlePageDown={handlePageDown}
         handlePageUp={handlePageUp}
+        loadPagesBatch={loadPagesBatch}
+        viewerRef={viewerRef}
+        effectivePageHeight={effectivePageHeight}
       />
       <FileSelect setFile={setFile} />
     </div>

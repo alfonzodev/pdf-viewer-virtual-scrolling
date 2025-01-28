@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { appendPagesInView, pageInView, prependPagesInView, QueueOperation } from "../types";
 import { PDFDocumentProxy } from "pdfjs-dist";
+import { renderPage } from "../utils";
 
 const useVirtualisedList = () => {
   const [pagesInView, setPagesInView] = useState<pageInView[]>([]);
@@ -37,6 +38,13 @@ const useVirtualisedList = () => {
     },
     [processQueue]
   );
+
+  // Clear the queue
+  const clearQueue = () => {
+    latestPagesInViewRef.current = [];
+    operationQueueRef.current = [];
+  };
+
   const loadNextPage = async (
     pdfDoc: PDFDocumentProxy,
     currentPagesInView: pageInView[],
@@ -76,6 +84,40 @@ const useVirtualisedList = () => {
     return currentPagesInView;
   };
 
+  const loadPagesBatch = (
+    pdfDoc: PDFDocumentProxy,
+    numPages: number,
+    currentPage: number,
+    loadAmount: number,
+    viewerRef: React.RefObject<HTMLDivElement>,
+    effectivePageHeight: number
+  ) => {
+    if (!pdfDoc) return;
+    clearQueue();
+    enqueueOperation(async (currentPagesInView) => {
+      let startPage = currentPage;
+      const newPagesInView = [...currentPagesInView];
+      if (loadAmount > numPages) loadAmount = numPages;
+      if (currentPage > numPages - Math.floor(loadAmount / 2)) startPage = numPages + 1 - loadAmount;
+
+      for (let i = 0; i < loadAmount; i++) {
+        let pageNum = startPage + i;
+        const pageImgUrl = await renderPage(pdfDoc, pageNum);
+        newPagesInView.push({
+          page: pageNum,
+          url: pageImgUrl,
+        });
+      }
+
+      if (viewerRef.current) {
+        const newScrollPosition = effectivePageHeight * (currentPage - 1);
+        viewerRef.current.scrollTop = newScrollPosition;
+      }
+
+      return newPagesInView;
+    });
+  };
+
   return {
     pagesInView,
     setPagesInView,
@@ -83,6 +125,7 @@ const useVirtualisedList = () => {
     enqueueOperation,
     loadNextPage,
     loadPreviousPage,
+    loadPagesBatch,
   };
 };
 
