@@ -2,7 +2,7 @@ import PdfViewer from "./components/PdfViewer";
 
 const App = () => {
   return (
-    <div className="flex justify-center items-center gap-y-4 py-16 w-full bg-gray-600">
+    <div className="w-screen h-screen bg-gray-600 flex items-center justify-center">
       <PdfViewer />
     </div>
   );

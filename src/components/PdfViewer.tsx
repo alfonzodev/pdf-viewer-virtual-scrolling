@@ -145,7 +145,12 @@ const PdfViewer = () => {
   }, [currentPage, numPages, pdfDoc, enqueueOperation, appendPagesInView, prependPagesInView]);
 
   return (
-    <div className="select-none">
+    <div
+      style={{
+        width: `${PDF_VIEWER_WIDTH[screenBreakpoint]}px`,
+      }}
+      className="select-none flex flex-col items-center"
+    >
       <div className="w-full bg-white h-10 border-b  py-1 px-4 flex justify-start items-center">
         {file && <h1 className="font-medium text-sm">{file.name}</h1>}
       </div>
