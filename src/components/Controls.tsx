@@ -39,6 +39,7 @@ const Controls = ({
   const [newPageInput, setNewPageInput] = useState<string | null>(null);
 
   const handlePageInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    // @ts-expect-error
     if (!isNaN(e.target.value)) {
       setNewPageInput(e.target.value);
     }
